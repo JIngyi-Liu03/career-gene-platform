@@ -29,9 +29,12 @@
 
 ### 1) 前置条件：安装 Docker 与 Compose 插件
 
+> Ubuntu 24.04 默认 apt 源**不含** `docker-compose-plugin`，必须用官方脚本安装。
+
 ```bash
-sudo apt-get update
-sudo apt-get install -y docker.io docker-compose-plugin
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
+sudo docker compose version   # 确认输出 v2.x.x（deploy.sh 依赖此插件）
 ```
 
 ### 2) 克隆仓库（即"上传代码"，之后不再手动传文件）
