@@ -31,7 +31,7 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
-      DATABASE_URL: postgresql://career:${DB_PASSWORD:?请在 .env 中设置 DB_PASSWORD}@db:5432/career_gene?schema=public
+      DATABASE_URL: ${DATABASE_URL:?请在 .env 中设置 DATABASE_URL}
       PORT: "3000"
       ACCESS_JWT_SECRET: ${ACCESS_JWT_SECRET:?请在 .env 中设置 ACCESS_JWT_SECRET}
       REFRESH_JWT_SECRET: ${REFRESH_JWT_SECRET:?请在 .env 中设置 REFRESH_JWT_SECRET}
