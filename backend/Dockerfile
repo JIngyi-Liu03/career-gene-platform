@@ -3,7 +3,8 @@ FROM node:20-alpine
 WORKDIR /app
 
 # 安装运行/构建期依赖（下载中文字体 + prisma）
-RUN apk add --no-cache curl
+# libc6-compat/openssl 是 Prisma 引擎（glibc 二进制）在 Alpine(musl) 上运行的必需依赖
+RUN apk add --no-cache curl libc6-compat openssl
 
 # 下载中文字体（报告 PDF 必须嵌入 CJK 字形才能显示中文）
 # 服务运行时路径：容器 /app 为项目根，dist 内 __dirname/../fonts = /app/fonts
