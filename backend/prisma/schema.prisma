@@ -1,0 +1,74 @@
+// Prisma schema —— Career Gene Platform v2
+// 业务唯一来源：用户、测评(Assessment)、逐题作答(Answer)、维度结果(Result)、报告(Report)。
+// 关系型 + 结构化，便于后续做数据分析与聚合查询。
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// 用户：手机号唯一标识，密码与安全问题答案均以 bcrypt 哈希存储（无明文 token）。
+model User {
+  id           Int      @id @default(autoincrement())
+  phone        String   @unique
+  name         String
+  passwordHash String
+  securityQuestion   String // 注册时选定的安全问题（明文存储，仅作提示）
+  securityAnswerHash String // 安全问题答案的 bcrypt 哈希
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  assessments  Assessment[]
+}
+
+// 一次完整测评（5 个部分）。同一用户可有多条（重测/历史），以最新一条为准。
+model Assessment {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status    String   @default("in_progress") // 'in_progress' | 'completed'
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  answers   Answer[]
+  results   Result[]
+  reports   Report[]
+
+  @@index([userId])
+}
+
+// 逐题作答：稀疏存储（只存已答），(assessmentId, questionIndex) 唯一。
+model Answer {
+  id           Int      @id @default(autoincrement())
+  assessmentId Int
+  assessment   Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  questionIndex Int
+  partIndex    Int
+  choice       Int // 选中的选项下标
+  createdAt    DateTime @default(now())
+
+  @@unique([assessmentId, questionIndex])
+}
+
+// 维度结果：每个 category（mbti/disc/pdp/ennea/career）一行，payload 为后端算好的画像。
+model Result {
+  id           Int      @id @default(autoincrement())
+  assessmentId Int
+  assessment   Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  category     String // 'mbti' | 'disc' | 'pdp' | 'enneagram' | 'career'
+  payload      Json
+  computedAt   DateTime @default(now())
+
+  @@unique([assessmentId, category])
+}
+
+// 报告生成记录（便于统计报告下载量、格式等）。
+model Report {
+  id           Int      @id @default(autoincrement())
+  assessmentId Int
+  assessment   Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  format       String   @default("pdf")
+  generatedAt  DateTime @default(now())
+}

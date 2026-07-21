@@ -1,0 +1,8 @@
+# 统一仓库行尾，避免 Windows 开发者提交的脚本在 Linux 服务器执行失败
+* text=auto
+
+# 脚本与配置文件强制 LF，确保在服务器上可执行 / 不被解析错误
+*.sh     text eol=lf
+*.conf   text eol=lf
+*.yml    text eol=lf
+*.yaml   text eol=lf
