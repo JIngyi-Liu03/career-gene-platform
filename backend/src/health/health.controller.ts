@@ -1,8 +1,10 @@
 import { Controller, Get, Res } from '@nestjs/common'
+import { SkipThrottle } from '@nestjs/throttler'
 import { Response } from 'express'
 import { PrismaService } from '../prisma/prisma.service'
 
 // 存活/就绪探针：做一次真实 DB 探活，DB 不可用时返回 503，便于 K8s/容器编排准确摘流。
+@SkipThrottle() // 存活探针不限流，避免容器编排误摘流。
 @Controller('health')
 export class HealthController {
   constructor(private readonly prisma: PrismaService) {}

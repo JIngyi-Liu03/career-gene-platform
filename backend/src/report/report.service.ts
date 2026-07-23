@@ -4,7 +4,7 @@ import { PDFDocument, StandardFonts, rgb, PDFFont, PDFPage } from 'pdf-lib'
 import fontkit from '@pdf-lib/fontkit'
 import * as fs from 'fs'
 import * as path from 'path'
-import { questions, partOrder, partRange, chapters } from '../quiz/questions.data'
+import { questions, partOrder, partRange, chapters } from '../quiz/bank'
 import { cleanText, cleanOpt } from '../quiz/clean'
 import type { SurveyResult, RadarAxis } from '../types/quiz'
 
@@ -43,7 +43,7 @@ export class ReportService {
 
     // 重建完整画像（后端自带题库重算，不依赖前端上报）
     const map: Record<string, any> = {}
-    a.results.forEach((r) => (map[r.category] = r.payload))
+    a.results.forEach((r) => (map[r.category] = JSON.parse(r.payload as string)))
     const results: SurveyResult = {
       mbti: map.mbti, disc: map.disc, pdp: map.pdp, ennea: map.ennea, career: map.career,
     }

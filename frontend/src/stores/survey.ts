@@ -22,6 +22,7 @@ interface SurveyState {
   doneParts: boolean[]
   viewRecordPart: number | null
   loading: boolean
+  freshSession: boolean
 }
 
 const ANSWERS_KEY = (phone: string) => 'cg_answers_' + phone
@@ -64,6 +65,7 @@ const state = reactive<SurveyState>({
   doneParts: [false, false, false, false, false],
   viewRecordPart: null,
   loading: false,
+  freshSession: false,
 })
 
 // —— 派生：进度 ——
@@ -99,6 +101,13 @@ const quizInfo = computed(() => {
     canPrev: state.current > 0,
     isLast: state.current === size - 1,
   }
+})
+
+// 当前部分是否已全部作答（用于提交前校验：必须答完全部才能提交）。
+const partAllAnswered = computed(() => {
+  const sp = state.sessionPart
+  if (sp < 0 || !state.sessionAnswers) return false
+  return state.sessionAnswers.every((a) => a != null)
 })
 
 function displayName(): string {
@@ -172,6 +181,7 @@ function logout(): void {
   clearTokens()
   try { localStorage.removeItem(USER_KEY) } catch {}
   state.user = { phone: '', name: '' }
+  state.freshSession = false
   state.answers = new Array(state.total).fill(null)
   state.partsCache = {}
   state.result = null
@@ -186,16 +196,21 @@ function startChapter(p: number): void {
   state.currentPart = Number(p)
 }
 
-async function enterChapter(): Promise<void> {
+async function enterChapter(fresh = false): Promise<void> {
   const p = state.currentPart
   await ensurePart(p)
   const size = state.partsCache[p].length
   const start = partStartOf(p)
   const sess: (number | null)[] = new Array(size).fill(null)
-  for (let i = 0; i < size; i++) sess[i] = state.answers[start + i] ?? null
+  if (!fresh) {
+    for (let i = 0; i < size; i++) sess[i] = state.answers[start + i] ?? null
+  }
+  // fresh（重新测试）：保留 state.answers 中的旧记录，仅用空白会话作答，
+  // 待提交后才会覆盖；中途退出（discardSession）则旧记录原样保留。
   state.sessionAnswers = sess
   state.sessionPart = p
   state.current = 0
+  state.freshSession = fresh
 }
 
 // 选择某选项；返回 true 表示本部分已答完（需提交）。
@@ -205,8 +220,11 @@ function choose(oi: number): boolean {
   const localIdx = state.current
   state.sessionAnswers[localIdx] = oi
   const start = partStartOf(sp)
-  state.answers[start + localIdx] = oi
-  if (state.user.phone) saveAnswers(state.user.phone, state.answers)
+  // 重测空白会话：作答先只写入会话，不覆盖旧记录（提交后才覆盖）。
+  if (!state.freshSession) {
+    state.answers[start + localIdx] = oi
+    if (state.user.phone) saveAnswers(state.user.phone, state.answers)
+  }
   if (state.current === state.partsCache[sp].length - 1) return true
   state.current++
   return false
@@ -217,9 +235,24 @@ function prevQuestion(): void {
   if (state.current > 0) state.current--
 }
 
+function gotoQuestion(i: number): void {
+  if (state.sessionPart < 0) return
+  const size = state.partsCache[state.sessionPart]?.length || 0
+  if (i >= 0 && i < size) state.current = i
+}
+
+// 第一道未作答的题号（无则返回当前题）。
+function firstUnanswered(): number {
+  const sp = state.sessionPart
+  if (sp < 0 || !state.sessionAnswers) return state.current
+  const i = state.sessionAnswers.findIndex((a) => a == null)
+  return i < 0 ? state.current : i
+}
+
 function discardSession(): void {
   state.sessionAnswers = null
   state.sessionPart = -1
+  state.freshSession = false
 }
 
 // 提交当前部分：写缓存 → 调后端 → 刷新进度 → 丢弃会话。
@@ -271,6 +304,7 @@ export const surveyStore = {
   progress,
   currentQuestion,
   quizInfo,
+  partAllAnswered,
   displayName,
   init,
   loadMeta,
@@ -284,6 +318,8 @@ export const surveyStore = {
   enterChapter,
   choose,
   prevQuestion,
+  gotoQuestion,
+  firstUnanswered,
   discardSession,
   submitCurrentPart,
   submitAll,

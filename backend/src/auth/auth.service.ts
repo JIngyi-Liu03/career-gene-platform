@@ -4,7 +4,7 @@ import { ConfigService } from '@nestjs/config'
 import * as bcrypt from 'bcryptjs'
 import { PrismaService } from '../prisma/prisma.service'
 import { SECURITY_QUESTIONS } from '../quiz/desc.data'
-import { partOrder, partStart, questions } from '../quiz/questions.data'
+import { partOrder, partStart, questions } from '../quiz/bank'
 import { ACCESS_TTL, REFRESH_TTL, DEV_ACCESS_SECRET, DEV_REFRESH_SECRET } from './jwt.constants'
 import type { RegisterDto, LoginDto, RecoverDto, RefreshDto, AuthTokens } from './dto'
 

@@ -46,6 +46,13 @@ async function onChoose(oi: number): Promise<void> {
   transitioning.value = true
   const finished = surveyStore.choose(oi)
   if (finished) {
+    if (!surveyStore.partAllAnswered.value) {
+      // 未全部作答：不提交，跳到第一道未答题让用户补齐。
+      surveyStore.gotoQuestion(surveyStore.firstUnanswered())
+      uiStore.showToast('请完成全部题目后再提交')
+      transitioning.value = false
+      return
+    }
     try {
       await surveyStore.submitCurrentPart()
       uiStore.showToast('本部分已保存')

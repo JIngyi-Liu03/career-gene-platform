@@ -7,7 +7,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -58,7 +58,7 @@ model Result {
   assessmentId Int
   assessment   Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
   category     String // 'mbti' | 'disc' | 'pdp' | 'enneagram' | 'career'
-  payload      Json
+  payload      String
   computedAt   DateTime @default(now())
 
   @@unique([assessmentId, category])
@@ -71,4 +71,41 @@ model Report {
   assessment   Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
   format       String   @default("pdf")
   generatedAt  DateTime @default(now())
+}
+
+// 运行时题库（替代原写死的 questions.data.ts）：Admin 修改写库并热更新内存缓存。
+// 五个部分各自独立（由 type 区分），排序由 sortOrder 全局唯一确定。
+model Question {
+  id        Int      @id @default(autoincrement())
+  partIndex Int
+  type      String                      // mbti|disc|pdp|enneagram|career
+  sec       Int?
+  dim       String?                     // PDP 维度（仅 pdp 部分使用）
+  text      String
+  options   String                      // string[]（JSON 字符串）：各选项文本
+  scoring   String                      // { m?: string[] } 或 { dim?: string }（JSON 字符串）
+  sortOrder Int      @unique
+  updatedAt DateTime @updatedAt
+
+  @@index([partIndex])
+}
+
+// 站点访问统计（前端挂载时上报，用于每日访问曲线）。
+model Visit {
+  id        Int      @id @default(autoincrement())
+  day       String                      // 'YYYY-MM-DD'
+  userId    Int?
+  createdAt DateTime @default(now())
+
+  @@index([day])
+}
+
+// 题库版本快照（每次成功保存记一个版本，支持审计与一键回滚）。
+model QuestionBankVersion {
+  id        Int      @id @default(autoincrement())
+  version   Int      @unique
+  note      String?                    // 管理员填写的修改说明
+  operator  String                     // 操作人（管理员账号）
+  snapshot  String                      // 全量题库结构（含 m/dim 算分键，JSON 字符串）
+  createdAt DateTime @default(now())
 }

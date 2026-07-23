@@ -1,6 +1,6 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
-import { questions, partOrder, partStart, partRange, chapters } from './questions.data'
+import { questions, partOrder, partStart, partRange, chapters, initBank } from './bank'
 import { cleanText, cleanOpt } from './clean'
 import {
   computeCategory,
@@ -13,6 +13,11 @@ import type { SurveyResult, PartMeta, PartResponse, QuestionDto } from '../types
 @Injectable()
 export class QuizService {
   constructor(private readonly prisma: PrismaService) {}
+
+  // 启动期把题库从 DB 加载到内存（空则自动灌种子）。
+  async onModuleInit(): Promise<void> {
+    await initBank(this.prisma)
+  }
 
   // —— 元数据：5 大部分信息（不含题目与算分键） ——
   meta(): { parts: PartMeta[] } {
@@ -119,8 +124,8 @@ export class QuizService {
     const payload = computeCategory(category, full)
     await this.prisma.result.upsert({
       where: { assessmentId_category: { assessmentId: assessment.id, category } },
-      create: { assessmentId: assessment.id, category, payload: payload as any },
-      update: { payload: payload as any },
+      create: { assessmentId: assessment.id, category, payload: JSON.stringify(payload) },
+      update: { payload: JSON.stringify(payload) },
     })
 
     const doneParts = await this.computeDoneParts(assessment.id)
@@ -129,40 +134,56 @@ export class QuizService {
     return { ok: true, doneParts }
   }
 
-  // —— 提交全量作答：重算并保存全部 5 个类别结果 ——
+  // —— 提交全量作答：先算结果，再在单个事务内原子地建测评并写入答案+结果 ——
+  // 任何一步失败都会整体回滚，绝不会留下空测评记录（避免后台/进度被清零）。
   async submitAll(userId: number, answers: number[]): Promise<{ ok: true; result: SurveyResult }> {
     if (!Array.isArray(answers) || answers.length !== questions.length) {
       throw new BadRequestException(`需提交全部 ${questions.length} 题答案`)
     }
-    const assessment = await this.getOrCreateAssessment(userId)
+    // 先算结果：答案无法生成画像时提前失败，且此时尚未创建任何测评记录。
+    let result: SurveyResult
+    try {
+      result = computeResults(answers)
+    } catch (e) {
+      throw new BadRequestException('答题数据无法生成结果：' + (e instanceof Error ? e.message : '格式异常'))
+    }
 
-    await this.prisma.$transaction(async (tx) => {
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        const assessment = await tx.assessment.create({ data: { userId, status: 'in_progress' } })
       for (let g = 0; g < questions.length; g++) {
         const choice = answers[g]
         if (choice == null) continue
         if (!Number.isInteger(choice) || choice < 0 || choice >= questions[g].a.length) continue
         const p = partOrder.indexOf(questions[g].type)
+        if (p < 0) continue // 跳过未归类题目，避免写入非法 partIndex
         await tx.answer.upsert({
           where: { assessmentId_questionIndex: { assessmentId: assessment.id, questionIndex: g } },
           create: { assessmentId: assessment.id, questionIndex: g, partIndex: p, choice },
           update: { choice },
         })
       }
-      const result = computeResults(answers)
-      const categories: ('mbti' | 'disc' | 'pdp' | 'enneagram' | 'career')[] = [
-        'mbti', 'disc', 'pdp', 'enneagram', 'career',
-      ]
+      // category（存储键）与 SurveyResult 对象键的映射：九型人格存储为 'enneagram'，对象键为 'ennea'。
+      const resultKey: Record<string, keyof SurveyResult> = {
+        mbti: 'mbti', disc: 'disc', pdp: 'pdp', enneagram: 'ennea', career: 'career',
+      }
+      const categories = Object.keys(resultKey) as (keyof typeof resultKey)[]
       for (const c of categories) {
+        const key = resultKey[c]
         await tx.result.upsert({
           where: { assessmentId_category: { assessmentId: assessment.id, category: c } },
-          create: { assessmentId: assessment.id, category: c, payload: result[c] as any },
-          update: { payload: result[c] as any },
+          create: { assessmentId: assessment.id, category: c, payload: JSON.stringify(result[key]) },
+          update: { payload: JSON.stringify(result[key]) },
         })
       }
-    })
+        await tx.assessment.update({ where: { id: assessment.id }, data: { status: 'completed' } })
+      })
+    } catch (e) {
+      console.error('submitAll transaction failed:', e)
+      throw new BadRequestException('提交失败，请稍后重试')
+    }
 
-    await this.prisma.assessment.update({ where: { id: assessment.id }, data: { status: 'completed' } })
-    return { ok: true, result: computeResults(answers) }
+    return { ok: true, result }
   }
 
   // —— 进度：已完成部分 + 稀疏答案（前端离线缓存用） ——
@@ -189,13 +210,13 @@ export class QuizService {
     })
     if (!a || a.results.length < 5) return null
     const map: Record<string, any> = {}
-    a.results.forEach((r) => (map[r.category] = r.payload))
-    if (!map.mbti || !map.disc || !map.pdp || !map.ennea || !map.career) return null
+    a.results.forEach((r) => (map[r.category] = JSON.parse(r.payload as string)))
+    if (!map.mbti || !map.disc || !map.pdp || !map.enneagram || !map.career) return null
     return {
       mbti: map.mbti,
       disc: map.disc,
       pdp: map.pdp,
-      ennea: map.ennea,
+      ennea: map.enneagram,
       career: map.career,
     }
   }

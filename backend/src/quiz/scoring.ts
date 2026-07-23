@@ -1,6 +1,6 @@
 // 算分引擎（业务内部）：由原前端 score.ts computeResults / pct100 精确搬运，
 // 并拆分为「按类别增量计算」，以支持每个部分单独提交并保存结果。
-import { questions, partOrder, partId } from './questions.data'
+import { questions, partOrder, partId } from './bank'
 import { mbtiTypes, discDesc } from './desc.data'
 import type { SurveyResult, RadarAxis, MbtiResult, CategoryKey } from '../types/quiz'
 

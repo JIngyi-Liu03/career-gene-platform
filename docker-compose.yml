@@ -1,12 +1,12 @@
 # Career Gene Platform —— 全新后端部署（与旧站 server.js:80 完全隔离）
 #
 # 隔离要点：
-#  - 对外端口 8080（旧站独占 80，物理不冲突）
+#  - 对外端口 8080（用户站）/ 8081（管理后台），旧站独占 80，物理不冲突
 #  - 独立 docker 网络 career-net，db/api 不映射宿主机端口
 #  - 独立数据卷 pgdata，与旧站 records.json 无关
-#  - 独立 nginx 容器，旧站无 nginx
+#  - 用户站 nginx(8080) 与 管理后台 nginx(8081) 分别反代 /api → api:3000
 #
-# 敏感信息（DB 密码 / JWT 密钥）由同目录 .env 注入（见 .env.example），不写死进本文件。
+# 敏感信息（DB 密码 / JWT 密钥 / 管理员密码）由同目录 .env 注入（见 .env.example），不写死进本文件。
 
 services:
   db:
@@ -35,6 +35,8 @@ services:
       PORT: "3000"
       ACCESS_JWT_SECRET: ${ACCESS_JWT_SECRET:?请在 .env 中设置 ACCESS_JWT_SECRET}
       REFRESH_JWT_SECRET: ${REFRESH_JWT_SECRET:?请在 .env 中设置 REFRESH_JWT_SECRET}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:?请在 .env 中设置 ADMIN_USERNAME}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?请在 .env 中设置 ADMIN_PASSWORD}
     depends_on:
       db:
         condition: service_healthy
@@ -55,6 +57,21 @@ services:
     volumes:
       - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
       - ./frontend/dist:/usr/share/nginx/html:ro
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - career-net
+
+  # 管理后台（独立端口 8081，隔离于用户站）
+  admin-nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    ports:
+      - "8081:80"   # 管理后台：http://<服务器IP>:8081
+    volumes:
+      - ./nginx/admin.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./admin/dist:/usr/share/nginx/admin:ro
     depends_on:
       api:
         condition: service_healthy

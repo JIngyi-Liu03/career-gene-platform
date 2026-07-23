@@ -13,39 +13,9 @@
         <button @click="close" style="border:none;background:#eef1f6;color:#5b6b80;width:34px;height:34px;border-radius:50%;font-size:18px;cursor:pointer;flex:none">✕</button>
       </div>
       <div id="vr-body" style="padding:18px 20px;overflow-y:auto;-webkit-overflow-scrolling:touch;touch-action:auto;">
-        <template v-if="part === 0 && result">
-          <div class="type-box">
-            <div class="big">{{ result.mbti.type }}</div>
-            <div class="nm">{{ result.mbti.name }}</div>
-            <div class="ds">{{ result.mbti.desc }}</div>
-          </div>
-          <div style="font-size:13px;color:#5b6b80;margin:10px 0 6px;">各维度占比：</div>
-          <div class="bars">
-            <div class="pair" v-for="(pr, idx) in result.mbti.pairs" :key="idx">
-              <div class="pair-head">
-                <span style="color:#3b6ef0;font-weight:700">{{ pr.a }} {{ pr.pa }}%</span>
-                <span style="color:#f3a712;font-weight:700">{{ pr.b }} {{ pr.pb }}%</span>
-              </div>
-              <div class="pair-track">
-                <div class="bar-fill" :style="{ background: '#3b6ef0', width: pr.pa + '%' }"></div>
-                <div class="bar-fill" :style="{ background: '#f3a712', width: pr.pb + '%' }"></div>
-              </div>
-            </div>
-          </div>
-        </template>
-
-        <template v-else-if="part !== null && axes">
-          <div class="radar-wrap">
-            <RadarChart :axes="axes" :color="radarColorValue" />
-            <div v-if="dominant" style="margin-top:10px;font-size:14px;color:#1f2a44;font-weight:700">
-              主导维度：{{ dominant.label }} {{ dominant.rate }}%
-            </div>
-          </div>
-        </template>
-
         <div
           v-if="part !== null"
-          style="margin-top:18px;font-size:15px;font-weight:700;color:#3b6ef0;border-bottom:2px solid #10b3a3;padding-bottom:8px;margin-bottom:10px;"
+          style="margin-top:8px;font-size:15px;font-weight:700;color:#3b6ef0;border-bottom:2px solid #10b3a3;padding-bottom:8px;margin-bottom:10px;"
         >
           答题记录（共 {{ size }} 题）
         </div>
@@ -75,32 +45,16 @@
 
 <script setup lang="ts">
 import { computed, watch } from 'vue'
-import RadarChart from './RadarChart.vue'
 import { surveyStore } from '@/stores/survey'
-import type { RadarAxis } from '@/types/quiz'
 
-const titles = [
-  '第一部分 · MBTI 认知与决策模式',
-  '第二部分 · DISC 行为与沟通风格',
-  '第三部分 · PDP 能量特质与气场',
-  '第四部分 · 九型 核心动机与注意力焦点',
-  '第五部分 · 职业锚 职业价值与内在驱动力',
-]
-const radarColor = ['#3b6ef0', '#e4572e', '#3b6ef0', '#10b3a3', '#8b5cf6']
-const keyMap: Record<number, 'disc' | 'pdp' | 'ennea' | 'career'> = { 1: 'disc', 2: 'pdp', 3: 'ennea', 4: 'career' }
+const titles = ['第一部分', '第二部分', '第三部分', '第四部分', '第五部分']
 
 const part = computed(() => surveyStore.state.viewRecordPart)
-const result = computed(() => surveyStore.state.result)
-const title = computed(() => (part.value !== null ? '📋 ' + titles[part.value] + '（' + surveyStore.displayName() + '）' : ''))
-const axes = computed<RadarAxis[] | null>(() => {
-  if (part.value === null || part.value === 0 || !result.value) return null
-  return result.value[keyMap[part.value]]
-})
-const dominant = computed<RadarAxis | null>(() => {
-  if (!axes.value || !axes.value.length) return null
-  return axes.value.reduce((a, b) => (b.rate > a.rate ? b : a), axes.value[0])
-})
-const radarColorValue = computed(() => (part.value !== null ? radarColor[part.value] : '#3b6ef0'))
+const title = computed(() =>
+  part.value !== null
+    ? '📋 ' + titles[part.value] + ' · 答题记录（' + surveyStore.displayName() + '）'
+    : '',
+)
 const size = computed(() => {
   if (part.value === null) return 0
   const qs = surveyStore.state.partsCache[part.value] || []
@@ -116,11 +70,10 @@ const partQuestions = computed(() => {
   }))
 })
 
-// 打开查看记录时，确保结果与各部题目已就绪（供雷达图与作答明细渲染）。
+// 打开查看记录时，确保各部题目已就绪（供作答明细渲染）。
 watch(part, async (p) => {
   if (p === null) return
   try {
-    if (!surveyStore.state.result) await surveyStore.loadResult()
     await surveyStore.ensureAllParts()
   } catch {}
 })

@@ -6,7 +6,7 @@
 
     <template v-if="result">
       <!-- MBTI -->
-      <div style="background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px 24px;margin-bottom:16px;box-shadow:0 2px 10px rgba(31,42,68,.04);">
+      <div style="background:transparent;border:none;box-shadow:none;border-radius:0;padding:8px 0;margin-bottom:16px;">
         <div class="type-box">
           <div class="big">{{ result.mbti.type }}</div>
           <div class="nm">{{ result.mbti.name }}</div>

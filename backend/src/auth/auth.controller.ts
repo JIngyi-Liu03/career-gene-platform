@@ -1,4 +1,5 @@
 import { Controller, Post, Body, Get, UnauthorizedException } from '@nestjs/common'
+import { Throttle } from '@nestjs/throttler'
 import { AuthService } from './auth.service'
 import { JwtAuthGuard } from './jwt.guard'
 import { GetUser } from './get-user.decorator'
@@ -15,21 +16,29 @@ export class AuthController {
     return { questions: SECURITY_QUESTIONS }
   }
 
+  // 注册：每 IP 每分钟最多 5 次，防批量注册/爆破。
+  @Throttle({ global: { limit: 5, ttl: 60000 } })
   @Post('register')
   register(@Body() dto: RegisterDto) {
     return this.service.register(dto)
   }
 
+  // 登录：每 IP 每分钟最多 5 次，防密码爆破。
+  @Throttle({ global: { limit: 5, ttl: 60000 } })
   @Post('login')
   login(@Body() dto: LoginDto) {
     return this.service.login(dto)
   }
 
+  // 找回密码：每 IP 每分钟最多 5 次。
+  @Throttle({ global: { limit: 5, ttl: 60000 } })
   @Post('recover')
   recover(@Body() dto: RecoverDto) {
     return this.service.recover(dto)
   }
 
+  // 刷新令牌：每 IP 每分钟最多 10 次（续期较频繁）。
+  @Throttle({ global: { limit: 10, ttl: 60000 } })
   @Post('refresh')
   refresh(@Body() dto: RefreshDto) {
     return this.service.refresh(dto)

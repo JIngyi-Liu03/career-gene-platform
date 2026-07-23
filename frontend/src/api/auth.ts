@@ -18,12 +18,6 @@ export function login(input: { phone: string; password: string }): Promise<AuthR
   })
 }
 
-export function recover(input: {
-  phone: string; name: string; securityQuestion: string; securityAnswer: string; newPassword: string
-}): Promise<{ ok: true }> {
-  return apiFetch<{ ok: true }>('auth/recover', { method: 'POST', body: input })
-}
-
 export function securityQuestions(): Promise<{ questions: string[] }> {
   return apiFetch<{ questions: string[] }>('auth/security-questions', { auth: false })
 }

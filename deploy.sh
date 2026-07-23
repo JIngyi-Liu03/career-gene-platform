@@ -20,8 +20,13 @@ cd "$ROOT_DIR"
 echo "==> [1/4] 拉取最新代码"
 git pull --ff-only
 
-echo "==> [2/4] 构建前端（不修改任何前端代码，仅执行其 build 产出 dist）"
+echo "==> [2/4] 构建前端（用户站 + 管理后台，均仅执行其 build 产出 dist）"
 cd frontend
+npm ci
+npm run build
+cd "$ROOT_DIR"
+
+cd admin
 npm ci
 npm run build
 cd "$ROOT_DIR"
@@ -49,4 +54,6 @@ if [ "$HEALTHY" -ne 1 ]; then
 fi
 
 docker compose ps
-echo "==> 完成。访问 http://<服务器IP>:8080/"
+echo "==> 完成。"
+echo "    用户站：  http://<服务器IP>:8080/"
+echo "    管理后台：http://<服务器IP>:8081/"

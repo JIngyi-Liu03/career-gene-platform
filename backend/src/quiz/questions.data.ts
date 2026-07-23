@@ -2,7 +2,7 @@
 // 含算分键 m（MBTI/DISC/九型/职业锚）与 dim（PDP），绝不对外暴露（API 只返回 text/options）。
 import type { QuestionBank, PartType } from '../types/quiz'
 
-export const questions: QuestionBank[] = [
+export const seedQuestions: QuestionBank[] = [
 
   /* ═════════════════════════════════════════════════════════════════
      MBTI 第一部分 — 问题选择（Q1–Q26）共 26 题
@@ -845,15 +845,6 @@ export const secHints: Record<number, string> = {
 };
 
 export const partOrder: PartType[] = ['mbti', 'disc', 'pdp', 'enneagram', 'career']
-export type PartKey = (typeof partOrder)[number]
-
-// partId[i] = 第 i 题所属部分索引（0..4）
-export const partId: number[] = questions.map((q) => partOrder.indexOf(q.type as PartKey))
-// partStart[p] = 第 p 部分第一题的题号
-export const partStart: Record<number, number> = {}
-partId.forEach((p, i) => { if (!(p in partStart)) partStart[p] = i })
-export const lastIndex = questions.length - 1
-
 // 对外分章元信息（标题/题量/导语/提示），供 /quiz/meta 返回。
 export const chapters: { title: string; count: string; intro: string; hint: string }[] = [
   {
@@ -888,8 +879,4 @@ export const chapters: { title: string; count: string; intro: string; hint: stri
   },
 ]
 
-export function partRange(p: number): { start: number; end: number } {
-  const start = partStart[p]
-  const end = p < partOrder.length - 1 ? partStart[p + 1] : questions.length
-  return { start, end }
-}
+
