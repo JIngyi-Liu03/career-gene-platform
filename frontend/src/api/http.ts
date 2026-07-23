@@ -12,9 +12,10 @@ const metaBase = (typeof document !== 'undefined')
 
 const envBase = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_BASE) || ''
 
+// 生产部署时 frontend/.env 不入库，这里回退到同源 /api，由 nginx 反代到后端。
 export const WORKER_URL = (envBase
   ? String(envBase).replace(/\/+$/, '')
-  : (/^https?:\/\//i.test(metaBase) ? metaBase.replace(/\/+$/, '') : '')) || ''
+  : (/^https?:\/\//i.test(metaBase) ? metaBase.replace(/\/+$/, '') : '')) || '/api'
 
 const TOKEN_KEY = 'cg_tokens'
 

@@ -3,3 +3,5 @@ dist/
 .env
 *.log
 .DS_Store
+# 本地 schema（开发用 SQLite）不入库；服务器由 schema.prisma.example 生成
+prisma/schema.prisma

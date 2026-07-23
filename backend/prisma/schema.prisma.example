@@ -1,13 +1,14 @@
-// Prisma schema —— Career Gene Platform v2
+// Prisma schema 模板（PostgreSQL 版，用于生产/服务器）
+// 本仓库的 schema.prisma 已被故意移出版本管理（本地用 SQLite 开发、服务器用 PostgreSQL）。
+// 部署时：cp backend/prisma/schema.prisma.example backend/prisma/schema.prisma 即可。
 // 业务唯一来源：用户、测评(Assessment)、逐题作答(Answer)、维度结果(Result)、报告(Report)。
-// 关系型 + 结构化，便于后续做数据分析与聚合查询。
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 

@@ -31,7 +31,8 @@ npm ci
 npm run build
 cd "$ROOT_DIR"
 
-echo "==> [3/4] 重建并启动容器"
+echo "==> [3/4] 从模板生成 prisma schema（服务器用 PostgreSQL）并重建启动容器"
+cp backend/prisma/schema.prisma.example backend/prisma/schema.prisma
 docker compose up -d --build
 
 echo "==> [4/4] 等待后端就绪（GET /api/health）"
