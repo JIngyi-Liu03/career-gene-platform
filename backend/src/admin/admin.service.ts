@@ -61,12 +61,16 @@ export class AdminService {
     const expectPass = this.config.get<string>('ADMIN_PASSWORD') || ''
     const expectHash = this.config.get<string>('ADMIN_PASSWORD_HASH')?.trim() || ''
 
-    const userOk = timingSafeEqual(Buffer.from(username), Buffer.from(expectUser))
+    const userOk =
+      username.length === expectUser.length &&
+      timingSafeEqual(Buffer.from(username), Buffer.from(expectUser))
     let passOk = false
     if (expectHash) {
       passOk = await bcrypt.compare(password, expectHash)
     } else if (expectPass) {
-      passOk = timingSafeEqual(Buffer.from(password), Buffer.from(expectPass))
+      passOk =
+        password.length === expectPass.length &&
+        timingSafeEqual(Buffer.from(password), Buffer.from(expectPass))
     }
 
     if (!userOk || !passOk) {
