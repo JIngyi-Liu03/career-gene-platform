@@ -3,6 +3,7 @@ import {
   Post,
   Get,
   Put,
+  Delete,
   Body,
   Param,
   Query,
@@ -89,19 +90,46 @@ export class AdminController {
     return this.service.getUserResult(parseInt(id, 10))
   }
 
-  // 导出用户数据（Excel / Word）
+  // 导出用户数据（Excel / Word）：生成后返回限时下载直链（下载走 nginx 静态，无需 JWT）
+  //   userIds：勾选用户导出报告（含结果）；不传则导出全部（不含结果）
   @UseGuards(AdminJwtGuard)
   @Get('export')
   async exportUsers(
     @Query('format') format: string,
     @Query('includeResults') includeResults: string,
-    @Res() res: Response,
-  ) {
+    @Query('userIds') userIds?: string,
+  ): Promise<{ downloadUrl: string; uuid: string }> {
     const fmt = format === 'word' ? 'word' : 'excel'
     const inc = includeResults === 'true'
-    const { buffer, filename, contentType } = await this.service.exportUsers(inc, fmt)
-    res.setHeader('Content-Type', contentType)
-    res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`)
-    res.send(buffer)
+    const ids = userIds
+      ? userIds.split(',').map((s) => parseInt(s, 10)).filter((n) => !Number.isNaN(n))
+      : undefined
+    const { downloadUrl, uuid } = await this.service.exportUsersToFile({ includeResults: inc, format: fmt, userIds: ids })
+    // 兜底：5 分钟后删除文件，避免遗留
+    setTimeout(() => {
+      void this.service.deleteExport(uuid)
+    }, 5 * 60 * 1000)
+    return { downloadUrl, uuid }
+  }
+
+  // 前端下载完成后即时清理（受 JWT 保护）
+  @UseGuards(AdminJwtGuard)
+  @Delete('export/:uuid')
+  async deleteExport(@Param('uuid') uuid: string): Promise<{ ok: true }> {
+    await this.service.deleteExport(uuid)
+    return { ok: true }
+  }
+
+  // 本地开发回退：不走 nginx 静态（如本地 serve-admin.cjs 反代）时，由后端直接吐文件。
+  // 生产环境该路径由 nginx location /exports/ 接管，此路由不会被命中。
+  @Get('exports/:file')
+  async serveExport(@Param('file') file: string, @Res() res: Response) {
+    const fp = this.service.resolveExportFile(file)
+    if (!fp) {
+      res.status(400).end('bad filename')
+      return
+    }
+    res.setHeader('Content-Disposition', 'attachment')
+    res.sendFile(fp)
   }
 }

@@ -37,18 +37,23 @@
 
     <div class="panel">
       <div class="panel-head">
-        <h3>每用户完成情况（共 {{ users.length }} 人）</h3>
+        <h3>每用户完成情况（共 {{ users.length }} 人，已选 {{ selected.length }} 人）</h3>
         <div class="export-btns">
-          <button class="btn-export" @click="doExport('excel', false)">导出Excel（不含结果）</button>
-          <button class="btn-export" @click="doExport('excel', true)">导出Excel（含结果）</button>
-          <button class="btn-export" @click="doExport('word', false)">导出Word（不含结果）</button>
-          <button class="btn-export" @click="doExport('word', true)">导出Word（含结果）</button>
+          <button class="btn-export" @click="exportAll">导出（全部数据，不含结果）</button>
+          <button
+            class="btn-export primary"
+            :disabled="!selected.length"
+            @click="exportSelected"
+          >导出已选用户报告（{{ selected.length }}）</button>
         </div>
       </div>
       <div class="table-wrap">
         <table class="user-table">
           <thead>
             <tr>
+              <th class="center">
+                <input type="checkbox" :checked="allSelected" @change="toggleAll" title="全选" />
+              </th>
               <th>手机号</th>
               <th>姓名</th>
               <th>公司</th>
@@ -61,6 +66,9 @@
           </thead>
           <tbody>
             <tr v-for="u in users" :key="u.id">
+              <td class="center">
+                <input type="checkbox" :checked="selected.includes(u.id)" @change="toggle(u.id)" />
+              </td>
               <td>{{ u.phone }}</td>
               <td>{{ u.name }}</td>
               <td>{{ u.company || '-' }}</td>
@@ -85,7 +93,7 @@
               </td>
             </tr>
             <tr v-if="!users.length">
-              <td :colspan="8 + stats.partLabels.length" class="empty">暂无用户数据</td>
+              <td :colspan="9 + stats.partLabels.length" class="empty">暂无用户数据</td>
             </tr>
           </tbody>
         </table>
@@ -180,7 +188,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, reactive } from 'vue'
-import { getStats, getUsers, getVisits, getUserResult, getExportUrl } from '@/api/admin'
+import { getStats, getUsers, getVisits, getUserResult, requestExport, deleteExport } from '@/api/admin'
 import type { StatsResp, UserRow, VisitPoint, UserResult } from '@/api/admin'
 import LineChart from '@/components/LineChart.vue'
 
@@ -189,6 +197,7 @@ const users = ref<UserRow[] | null>(null)
 const visits = ref<VisitPoint[] | null>(null)
 const days = ref(30)
 const error = ref('')
+const selected = ref<number[]>([])
 
 const resultModal = reactive({
   visible: false,
@@ -250,26 +259,45 @@ function closeResult() {
   resultModal.data = null
 }
 
-function doExport(format: 'excel' | 'word', includeResults: boolean) {
-  const token = localStorage.getItem('admin_access_token') || ''
-  const url = getExportUrl(format, includeResults)
-  // 使用带 token 的下载方式
-  fetch(url, { headers: { Authorization: `Bearer ${token}` } }).then((res) => {
-    if (!res.ok) throw new Error('导出失败')
-    return res.blob()
-  }).then((blob) => {
-    const ext = format === 'word' ? 'doc' : 'xlsx'
-    const objUrl = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = objUrl
-    a.download = `用户数据导出.${ext}`
-    document.body.appendChild(a)
-    a.click()
-    a.remove()
-    URL.revokeObjectURL(objUrl)
-  }).catch((e: any) => {
-    alert('导出失败: ' + (e?.message || '未知错误'))
-  })
+function toggle(id: number) {
+  const i = selected.value.indexOf(id)
+  if (i >= 0) selected.value.splice(i, 1)
+  else selected.value.push(id)
+}
+const allSelected = computed(() => {
+  const list = users.value || []
+  return list.length > 0 && selected.value.length === list.length
+})
+function toggleAll() {
+  const list = users.value || []
+  selected.value = allSelected.value ? [] : list.map((u) => u.id)
+}
+
+function triggerDownload({ downloadUrl, uuid }: { downloadUrl: string; uuid: string }) {
+  const a = document.createElement('a')
+  a.href = downloadUrl
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  // 下载后即时清理：延迟一点确保浏览器已发起请求
+  setTimeout(() => deleteExport(uuid).catch(() => {}), 1500)
+}
+function onExportError(e: any) {
+  alert('导出失败: ' + (e?.message || '未知错误'))
+}
+
+// 按钮1：导出全部后台数据（不含测试结果），Excel
+function exportAll() {
+  requestExport('excel', false).then(triggerDownload).catch(onExportError)
+}
+
+// 按钮2：导出勾选用户的测试报告（含结果），Word
+function exportSelected() {
+  if (!selected.value.length) {
+    alert('请先勾选要导出报告的用户')
+    return
+  }
+  requestExport('word', true, selected.value).then(triggerDownload).catch(onExportError)
 }
 
 const totalVisits = computed(() =>
@@ -364,6 +392,9 @@ h2 { margin-bottom: 16px; }
   cursor: pointer;
 }
 .btn-export:hover { background: #e8f0fe; }
+.btn-export.primary { background: var(--accent,#3b6ef0); color: #fff; }
+.btn-export.primary:hover { background: #2f5bd0; }
+.btn-export:disabled { opacity: .5; cursor: not-allowed; }
 
 .days button {
   margin-left: 8px;

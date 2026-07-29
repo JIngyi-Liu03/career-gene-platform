@@ -101,8 +101,21 @@ export function getUserResult(userId: number) {
   return apiFetch<UserResult>(`admin/users/${userId}/result`)
 }
 
-export function getExportUrl(format: 'excel' | 'word', includeResults: boolean) {
-  return `${import.meta.env.VITE_API_BASE || '/api'}/admin/export?format=${format}&includeResults=${includeResults}`
+export interface ExportResp {
+  downloadUrl: string
+  uuid: string
+}
+
+export function requestExport(format: 'excel' | 'word', includeResults: boolean, userIds?: number[]): Promise<ExportResp> {
+  const params = new URLSearchParams()
+  params.set('format', format)
+  params.set('includeResults', String(includeResults))
+  if (userIds && userIds.length) params.set('userIds', userIds.join(','))
+  return apiFetch<ExportResp>(`admin/export?${params.toString()}`)
+}
+
+export function deleteExport(uuid: string) {
+  return apiFetch<{ ok: true }>(`admin/export/${uuid}`, { method: 'DELETE' })
 }
 
 export function getVisits(days: number) {

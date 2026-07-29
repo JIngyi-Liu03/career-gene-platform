@@ -23,6 +23,27 @@ const MIME = {
 const server = http.createServer((req, res) => {
   const url = req.url || '/'
 
+  // 反向代理 /exports/* -> 后端 127.0.0.1:3000（保留 /exports 前缀，本地直接吐文件）
+  if (url.startsWith('/exports/')) {
+    const options = {
+      hostname: API_HOST,
+      port: API_PORT,
+      path: url,
+      method: req.method,
+      headers: { ...req.headers, host: `${API_HOST}:${API_PORT}` },
+    }
+    const proxy = http.request(options, (proxyRes) => {
+      res.writeHead(proxyRes.statusCode || 502, proxyRes.headers)
+      proxyRes.pipe(res)
+    })
+    proxy.on('error', (e) => {
+      res.writeHead(502, { 'Content-Type': 'application/json; charset=utf-8' })
+      res.end(JSON.stringify({ error: 'backend unreachable', detail: e.message }))
+    })
+    req.pipe(proxy)
+    return
+  }
+
   // 反向代理 /api/* -> 后端 127.0.0.1:3000（剥离 /api 前缀）
   if (url.startsWith('/api/') || url === '/api') {
     const targetPath = url === '/api' ? '/' : url.slice('/api'.length)

@@ -23,6 +23,9 @@ import type { AdminLoginDto, AdminQuestionInput, UpdatePartBody } from './dto'
 import { DEV_ACCESS_SECRET } from '../auth/jwt.constants'
 import { dayKey } from '../common/util'
 import * as ExcelJS from 'exceljs'
+import * as fs from 'fs'
+import * as path from 'path'
+import * as crypto from 'crypto'
 
 interface AdminJwtPayload {
   sub: number
@@ -38,6 +41,8 @@ export class AdminService {
   private readonly failMap = new Map<string, { count: number; until: number }>()
   private readonly MAX_FAIL = 5
   private readonly LOCK_MS = 10 * 60 * 1000
+  private readonly EXPORT_DIR = '/exports'
+  private readonly EXPORT_TTL_MS = 30 * 60 * 1000
 
   constructor(
     private readonly prisma: PrismaService,
@@ -384,9 +389,17 @@ export class AdminService {
     }
   }
 
-  // —— 导出用户数据（Excel 或 Word） ——
-  async exportUsers(includeResults: boolean, format: 'excel' | 'word'): Promise<{ buffer: Buffer; filename: string; contentType: string }> {
+  // —— 导出用户数据（Excel 或 Word）：服务端生成并落盘到共享卷，返回限时直链 ——
+  //   userIds 为空时导出全部；传入时仅导出勾选用户。format=word 即测试报告（含结果）。
+  async exportUsersToFile(opts: {
+    includeResults: boolean
+    format: 'excel' | 'word'
+    userIds?: number[]
+  }): Promise<{ downloadUrl: string; uuid: string; ext: string }> {
+    const { includeResults, format, userIds } = opts
+    const where = userIds && userIds.length ? { id: { in: userIds } } : {}
     const users = await this.prisma.user.findMany({
+      where,
       orderBy: { createdAt: 'desc' },
       select: {
         id: true, phone: true, name: true, company: true, createdAt: true,
@@ -427,13 +440,61 @@ export class AdminService {
       return { id: u.id, phone: u.phone, name: u.name, company: u.company || null, registeredAt: u.createdAt, completion, allCompleted, result }
     })
 
+    let buffer: Buffer
+    let ext: string
     if (format === 'excel') {
-      const buffer = await this.buildExcelBuffer(rows, includeResults)
-      return { buffer, filename: '用户数据导出.xlsx', contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }
+      buffer = await this.buildExcelBuffer(rows, includeResults)
+      ext = 'xlsx'
     } else {
-      const buffer = this.buildWordBuffer(rows, includeResults)
-      return { buffer, filename: '用户数据导出.doc', contentType: 'application/msword' }
+      buffer = this.buildWordBuffer(rows, includeResults)
+      ext = 'doc'
     }
+
+    const uuid = crypto.randomUUID()
+    const fileName = `${uuid}-用户数据导出.${ext}`
+    fs.mkdirSync(this.EXPORT_DIR, { recursive: true })
+    fs.writeFileSync(path.join(this.EXPORT_DIR, fileName), buffer)
+    // 每次导出顺带清理超期文件，防止磁盘累积
+    void this.cleanExports()
+    return { downloadUrl: `/exports/${fileName}`, uuid, ext }
+  }
+
+  // 清理超期导出文件（>30min），best-effort。
+  async cleanExports(): Promise<void> {
+    try {
+      if (!fs.existsSync(this.EXPORT_DIR)) return
+      const now = Date.now()
+      for (const f of fs.readdirSync(this.EXPORT_DIR)) {
+        const fp = path.join(this.EXPORT_DIR, f)
+        try {
+          const st = fs.statSync(fp)
+          if (now - st.mtimeMs > this.EXPORT_TTL_MS) fs.unlinkSync(fp)
+        } catch {
+          /* 跳过单个文件异常 */
+        }
+      }
+    } catch {
+      /* 目录不可访问时忽略 */
+    }
+  }
+
+  // 按 uuid 删除对应导出文件（下载完成后即时清理）。
+  async deleteExport(uuid: string): Promise<void> {
+    if (!uuid || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(uuid)) return
+    try {
+      if (!fs.existsSync(this.EXPORT_DIR)) return
+      for (const f of fs.readdirSync(this.EXPORT_DIR)) {
+        if (f.startsWith(uuid + '-')) fs.unlinkSync(path.join(this.EXPORT_DIR, f))
+      }
+    } catch {
+      /* 忽略 */
+    }
+  }
+
+  // 校验文件名合法性并返回绝对路径（防目录穿越）；非法返回 null。
+  resolveExportFile(file: string): string | null {
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}-.+\.[a-z0-9]+$/i.test(file)) return null
+    return path.join(this.EXPORT_DIR, file)
   }
 
   private async buildExcelBuffer(
@@ -446,6 +507,17 @@ export class AdminService {
   ): Promise<Buffer> {
     const wb = new ExcelJS.Workbook()
     const ws = wb.addWorksheet('用户数据')
+
+    // 汇总信息（仅"全部数据"导出时展示：注册人数 + 完成全部问卷人数）
+    if (!includeResults) {
+      const registered = rows.length
+      const allDone = rows.filter((r) => r.allCompleted).length
+      const s1 = ws.addRow(['注册人数', registered])
+      s1.getCell(1).font = { bold: true }
+      const s2 = ws.addRow(['完成全部问卷人数', allDone])
+      s2.getCell(1).font = { bold: true }
+      ws.addRow([])
+    }
 
     // 基础表头
     const headers = ['用户ID', '姓名', '手机号', '公司', '注册时间', '完成度(%)', '全部完成']
