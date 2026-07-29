@@ -70,7 +70,7 @@ export class AuthService {
     const securityAnswerHash = await bcrypt.hash(dto.securityAnswer.trim(), 10)
 
     const user = await this.prisma.user.create({
-      data: { phone, name, passwordHash, securityQuestion: dto.securityQuestion, securityAnswerHash },
+      data: { phone, name, company: dto.company?.trim() || null, passwordHash, securityQuestion: dto.securityQuestion, securityAnswerHash },
     })
     const tokens = this.issueTokens(user.id, user.phone)
     return { ...tokens, doneParts: await this.computeDoneParts(user.id) }

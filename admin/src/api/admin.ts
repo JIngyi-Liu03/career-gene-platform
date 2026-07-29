@@ -29,11 +29,24 @@ export interface UserRow {
   id: number
   phone: string
   name: string
+  company: string | null
   registeredAt: string
   doneParts: boolean[]
   answeredCount: number
   total: number
   completion: number
+  allCompleted: boolean
+}
+
+export interface UserResult {
+  user: { name: string; phone: string; company: string | null }
+  result: {
+    mbti: any
+    disc: Array<{ label: string; rate: number }>
+    pdp: Array<{ label: string; rate: number }>
+    ennea: Array<{ label: string; rate: number }>
+    career: Array<{ label: string; rate: number }>
+  }
 }
 
 export interface StatsResp {
@@ -82,6 +95,14 @@ export function getStats() {
 
 export function getUsers() {
   return apiFetch<UserRow[]>('admin/users')
+}
+
+export function getUserResult(userId: number) {
+  return apiFetch<UserResult>(`admin/users/${userId}/result`)
+}
+
+export function getExportUrl(format: 'excel' | 'word', includeResults: boolean) {
+  return `${import.meta.env.VITE_API_BASE || '/api'}/admin/export?format=${format}&includeResults=${includeResults}`
 }
 
 export function getVisits(days: number) {

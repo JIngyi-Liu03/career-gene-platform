@@ -17,6 +17,7 @@ model User {
   id           Int      @id @default(autoincrement())
   phone        String   @unique
   name         String
+  company      String?  @default("")
   passwordHash String
   securityQuestion   String // 注册时选定的安全问题（明文存储，仅作提示）
   securityAnswerHash String // 安全问题答案的 bcrypt 哈希

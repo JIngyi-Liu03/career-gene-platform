@@ -5,6 +5,7 @@ export interface RegisterDto {
   password: string
   securityQuestion: string
   securityAnswer: string
+  company?: string
 }
 
 export interface LoginDto {

@@ -10,7 +10,7 @@ import { ConfigService } from '@nestjs/config'
 import * as bcrypt from 'bcryptjs'
 import { timingSafeEqual } from 'crypto'
 import { PrismaService } from '../prisma/prisma.service'
-import type { QuestionBank, PartType } from '../types/quiz'
+import type { QuestionBank, PartType, SurveyResult } from '../types/quiz'
 import {
   questions,
   partOrder,
@@ -22,6 +22,7 @@ import { PART_DIMENSIONS, PART_LABELS, PART_SCORING_NOTE } from './dimensions'
 import type { AdminLoginDto, AdminQuestionInput, UpdatePartBody } from './dto'
 import { DEV_ACCESS_SECRET } from '../auth/jwt.constants'
 import { dayKey } from '../common/util'
+import * as ExcelJS from 'exceljs'
 
 interface AdminJwtPayload {
   sub: number
@@ -271,11 +272,13 @@ export class AdminService {
       id: number
       phone: string
       name: string
+      company: string | null
       registeredAt: Date
       doneParts: boolean[]
       answeredCount: number
       total: number
       completion: number
+      allCompleted: boolean
     }[]
   > {
     const total = questions.length
@@ -285,11 +288,12 @@ export class AdminService {
         id: true,
         phone: true,
         name: true,
+        company: true,
         createdAt: true,
         assessments: {
           orderBy: { createdAt: 'desc' },
           take: 1,
-          select: { answers: { select: { questionIndex: true } } },
+          select: { answers: { select: { questionIndex: true } }, status: true },
         },
       },
     })
@@ -303,15 +307,18 @@ export class AdminService {
       })
       const answeredCount = answered.size
       const completion = total ? Math.round((answeredCount / total) * 100) : 0
+      const allCompleted = doneParts.every(Boolean)
       return {
         id: u.id,
         phone: u.phone,
         name: u.name,
+        company: u.company || null,
         registeredAt: u.createdAt,
         doneParts,
         answeredCount,
         total,
         completion,
+        allCompleted,
       }
     })
   }
@@ -339,5 +346,271 @@ export class AdminService {
       out.push({ day: key, count: map.get(key) ?? 0 })
     }
     return out
+  }
+
+  // —— 查看某个已完成用户的测试结果（不含逐题选项） ——
+  async getUserResult(userId: number): Promise<{ user: { name: string; phone: string; company: string | null }; result: SurveyResult } | null> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, name: true, phone: true, company: true },
+    })
+    if (!user) throw new NotFoundException('用户不存在')
+
+    const a = await this.prisma.assessment.findFirst({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+      include: { results: true },
+    })
+    if (!a || a.results.length < 5) throw new NotFoundException('该用户尚未完成全部测试')
+
+    const map: Record<string, any> = {}
+    a.results.forEach((r) => (map[r.category] = JSON.parse(r.payload as string)))
+    if (!map.mbti || !map.disc || !map.pdp || !map.enneagram || !map.career) {
+      throw new NotFoundException('测试结果不完整')
+    }
+    return {
+      user: { name: user.name, phone: user.phone, company: user.company || null },
+      result: {
+        mbti: map.mbti,
+        disc: map.disc,
+        pdp: map.pdp,
+        ennea: map.enneagram,
+        career: map.career,
+      },
+    }
+  }
+
+  // —— 导出用户数据（Excel 或 Word） ——
+  async exportUsers(includeResults: boolean, format: 'excel' | 'word'): Promise<{ buffer: Buffer; filename: string; contentType: string }> {
+    const users = await this.prisma.user.findMany({
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true, phone: true, name: true, company: true, createdAt: true,
+        assessments: {
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+          select: { answers: { select: { questionIndex: true } }, results: true, status: true },
+        },
+      },
+    })
+
+    // 为每个用户计算完成情况并获取结果
+    const rows: {
+      id: number; phone: string; name: string; company: string | null
+      registeredAt: Date; completion: number; allCompleted: boolean
+      result: SurveyResult | null
+    }[] = users.map((u) => {
+      const a = u.assessments[0]
+      const answered = a ? new Set(a.answers.map((x) => x.questionIndex)) : new Set<number>()
+      const doneParts = partOrder.map((_, p) => {
+        const { start, end } = partRange(p)
+        for (let k = start; k < end; k++) if (!answered.has(k)) return false
+        return true
+      })
+      const answeredCount = answered.size
+      const total = questions.length
+      const completion = total ? Math.round((answeredCount / total) * 100) : 0
+      const allCompleted = doneParts.every(Boolean)
+
+      let result: SurveyResult | null = null
+      if (includeResults && a && a.results.length >= 5) {
+        const map: Record<string, any> = {}
+        a.results.forEach((r) => (map[r.category] = JSON.parse(r.payload as string)))
+        if (map.mbti && map.disc && map.pdp && map.enneagram && map.career) {
+          result = { mbti: map.mbti, disc: map.disc, pdp: map.pdp, ennea: map.enneagram, career: map.career }
+        }
+      }
+      return { id: u.id, phone: u.phone, name: u.name, company: u.company || null, registeredAt: u.createdAt, completion, allCompleted, result }
+    })
+
+    if (format === 'excel') {
+      const buffer = await this.buildExcelBuffer(rows, includeResults)
+      return { buffer, filename: '用户数据导出.xlsx', contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }
+    } else {
+      const buffer = this.buildWordBuffer(rows, includeResults)
+      return { buffer, filename: '用户数据导出.doc', contentType: 'application/msword' }
+    }
+  }
+
+  private async buildExcelBuffer(
+    rows: {
+      id: number; phone: string; name: string; company: string | null
+      registeredAt: Date; completion: number; allCompleted: boolean
+      result: SurveyResult | null
+    }[],
+    includeResults: boolean,
+  ): Promise<Buffer> {
+    const wb = new ExcelJS.Workbook()
+    const ws = wb.addWorksheet('用户数据')
+
+    // 基础表头
+    const headers = ['用户ID', '姓名', '手机号', '公司', '注册时间', '完成度(%)', '全部完成']
+    const headerWidths = [10, 12, 16, 20, 20, 14, 12]
+
+    if (includeResults) {
+      headers.push(
+        'MBTI-维度', 'MBTI-结果',
+        'DISC-主导', 'DISC-得分',
+        'PDP-主导', 'PDP-得分',
+        '九型-主导', '九型-得分',
+        '职业锚-主导', '职业锚-得分',
+      )
+      headerWidths.push(26, 16, 18, 28, 18, 28, 18, 28, 18, 28)
+    }
+
+    // 写表头
+    const headerRow = ws.addRow(headers)
+    headerRow.font = { bold: true }
+    headerRow.alignment = { horizontal: 'center', vertical: 'middle' }
+    headerRow.eachCell((cell) => { cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD6E4F0' } } })
+
+    headers.forEach((_, i) => { ws.getColumn(i + 1).width = headerWidths[i] || 18 })
+
+    // 标签映射
+    const labelMap: Record<string, Record<string, string>> = {
+      mbti: { E: '外倾E', I: '内倾I', N: '直觉N', S: '感觉S', F: '情感F', T: '思考T', J: '判断J', P: '知觉P' },
+      disc: { D: '支配型D', I: '影响型I', S: '稳健型S', C: '服从型C' },
+      pdp: { T: '老虎型T', P: '孔雀型P', K: '考拉型K', O: '猫头鹰型O', C: '变色龙型C' },
+      ennea: { A: '完美型A', B: '助人型B', C: '成就型C', D: '浪漫型D', E: '理智型E', F: '忠诚型F', G: '活跃型G', H: '领袖型H', I: '和平型I' },
+      career: { X: '自由型X', Y: '平衡型Y', Z: '活力型Z', W: '安全型W', V: '进取型V' },
+    }
+
+    function getAxisResult(axes: Array<{ label: string; rate: number }> | undefined, type: string): string {
+      if (!Array.isArray(axes)) return '-'
+      const map = labelMap[type] || {}
+      return axes.map((a) => `${map[a.label] || a.label} ${a.rate}%`).join(', ')
+    }
+
+    function getMbtiResult(mbti: any): { dims: string; result: string } {
+      if (!mbti || !Array.isArray(mbti.pairs)) return { dims: '-', result: '-' }
+      const map = labelMap.mbti || {}
+      const dims: string[] = []
+      const result: string[] = []
+      for (const pr of mbti.pairs) {
+        if (pr.a && pr.b) {
+          dims.push(`${map[pr.a] || pr.a} / ${map[pr.b] || pr.b}`)
+          const winner = pr.pa > pr.pb ? pr.a : pr.b
+          result.push(map[winner] || winner)
+        }
+      }
+      return { dims: dims.join('; '), result: result.join(' ') }
+    }
+
+    for (const row of rows) {
+      const rowData: any[] = [
+        row.id, row.name, row.phone, row.company || '-',
+        row.registeredAt instanceof Date ? row.registeredAt.toLocaleString('zh-CN') : String(row.registeredAt),
+        row.completion, row.allCompleted ? '是' : '否',
+      ]
+      if (includeResults && row.result) {
+        const mbtiStr = getMbtiResult(row.result.mbti)
+        rowData.push(
+          mbtiStr.dims, mbtiStr.result,
+          (labelMap.disc[row.result.disc?.[0]?.label] || row.result.disc?.[0]?.label || '-'),
+          getAxisResult(row.result.disc, 'disc'),
+          (labelMap.pdp[row.result.pdp?.[0]?.label] || row.result.pdp?.[0]?.label || '-'),
+          getAxisResult(row.result.pdp, 'pdp'),
+          (labelMap.ennea[row.result.ennea?.[0]?.label] || row.result.ennea?.[0]?.label || '-'),
+          getAxisResult(row.result.ennea, 'ennea'),
+          (labelMap.career[row.result.career?.[0]?.label] || row.result.career?.[0]?.label || '-'),
+          getAxisResult(row.result.career, 'career'),
+        )
+      } else if (includeResults) {
+        rowData.push('-', '-', '-', '-', '-', '-', '-', '-', '-', '-')
+      }
+      ws.addRow(rowData)
+    }
+
+    // 底部边框
+    ws.eachRow((r) => { r.eachCell((c) => { c.border = {
+      top: { style: 'thin' }, left: { style: 'thin' },
+      bottom: { style: 'thin' }, right: { style: 'thin' },
+    } }) })
+
+    return Buffer.from(await wb.xlsx.writeBuffer())
+  }
+
+  private buildWordBuffer(
+    rows: {
+      id: number; phone: string; name: string; company: string | null
+      registeredAt: Date; completion: number; allCompleted: boolean
+      result: SurveyResult | null
+    }[],
+    includeResults: boolean,
+  ): Buffer {
+    const labelMap: Record<string, Record<string, string>> = {
+      mbti: { E: '外倾E', I: '内倾I', N: '直觉N', S: '感觉S', F: '情感F', T: '思考T', J: '判断J', P: '知觉P' },
+      disc: { D: '支配型D', I: '影响型I', S: '稳健型S', C: '服从型C' },
+      pdp: { T: '老虎型T', P: '孔雀型P', K: '考拉型K', O: '猫头鹰型O', C: '变色龙型C' },
+      ennea: { A: '完美型A', B: '助人型B', C: '成就型C', D: '浪漫型D', E: '理智型E', F: '忠诚型F', G: '活跃型G', H: '领袖型H', I: '和平型I' },
+      career: { X: '自由型X', Y: '平衡型Y', Z: '活力型Z', W: '安全型W', V: '进取型V' },
+    }
+
+    function esc(s: any): string {
+      if (s == null) return '-'
+      return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    }
+
+    function getAxisText(axes: Array<{ label: string; rate: number }> | undefined, type: string): string {
+      if (!Array.isArray(axes)) return '-'
+      const map = labelMap[type] || {}
+      return axes.map((a) => `${map[a.label] || a.label} ${a.rate}%`).join(', ')
+    }
+
+    function getMbtiText(mbti: any): { dims: string; result: string } {
+      if (!mbti || !Array.isArray(mbti.pairs)) return { dims: '-', result: '-' }
+      const map = labelMap.mbti || {}
+      const dims: string[] = []
+      const result: string[] = []
+      for (const pr of mbti.pairs) {
+        if (pr.a && pr.b) {
+          dims.push(`${map[pr.a] || pr.a} / ${map[pr.b] || pr.b}`)
+          const winner = pr.pa > pr.pb ? pr.a : pr.b
+          result.push(map[winner] || winner)
+        }
+      }
+      return { dims: dims.join('; '), result: result.join(' ') }
+    }
+
+    let html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
+<head><meta charset="utf-8"><title>用户数据导出</title>
+<style>
+  table { border-collapse: collapse; width: 100%; }
+  th, td { border: 1px solid #333; padding: 6px 10px; font-size: 13px; text-align: center; }
+  th { background: #D6E4F0; font-weight: bold; }
+  td { text-align: left; }
+</style></head><body>
+<h2 style="text-align:center">用户数据导出</h2>
+<table>
+<tr><th>用户ID</th><th>姓名</th><th>手机号</th><th>公司</th><th>注册时间</th><th>完成度(%)</th><th>全部完成</th>`
+
+    if (includeResults) {
+      html += `<th>MBTI-维度</th><th>MBTI-结果</th><th>DISC-主导</th><th>DISC-得分</th><th>PDP-主导</th><th>PDP-得分</th><th>九型-主导</th><th>九型-得分</th><th>职业锚-主导</th><th>职业锚-得分</th>`
+    }
+    html += `</tr>`
+
+    for (const row of rows) {
+      html += `<tr>`
+      html += `<td>${row.id}</td><td>${esc(row.name)}</td><td>${esc(row.phone)}</td><td>${esc(row.company || '-')}</td>`
+      html += `<td>${esc(row.registeredAt instanceof Date ? row.registeredAt.toLocaleString('zh-CN') : String(row.registeredAt))}</td>`
+      html += `<td>${row.completion}</td><td>${row.allCompleted ? '是' : '否'}</td>`
+      if (includeResults && row.result) {
+        const m = getMbtiText(row.result.mbti)
+        html += `<td>${esc(m.dims)}</td><td>${esc(m.result)}</td>`
+        html += `<td>${esc(labelMap.disc[row.result.disc?.[0]?.label] || row.result.disc?.[0]?.label || '-')}</td>`
+        html += `<td>${esc(getAxisText(row.result.disc, 'disc'))}</td>`
+        html += `<td>${esc(labelMap.pdp[row.result.pdp?.[0]?.label] || row.result.pdp?.[0]?.label || '-')}</td>`
+        html += `<td>${esc(getAxisText(row.result.pdp, 'pdp'))}</td>`
+        html += `<td>${esc(labelMap.ennea[row.result.ennea?.[0]?.label] || row.result.ennea?.[0]?.label || '-')}</td>`
+        html += `<td>${esc(getAxisText(row.result.ennea, 'ennea'))}</td>`
+        html += `<td>${esc(labelMap.career[row.result.career?.[0]?.label] || row.result.career?.[0]?.label || '-')}</td>`
+        html += `<td>${esc(getAxisText(row.result.career, 'career'))}</td>`
+      } else if (includeResults) {
+        html += `<td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td>`
+      }
+      html += `</tr>`
+    }
+    html += `</table></body></html>`
+    return Buffer.from(html, 'utf-8')
   }
 }

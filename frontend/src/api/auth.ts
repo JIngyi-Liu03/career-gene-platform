@@ -3,7 +3,7 @@ import { apiFetch, setTokens } from './http'
 import type { AuthResp } from '@/types/quiz'
 
 export function register(input: {
-  name: string; phone: string; password: string; securityQuestion: string; securityAnswer: string
+  name: string; phone: string; password: string; securityQuestion: string; securityAnswer: string; company?: string
 }): Promise<AuthResp> {
   return apiFetch<AuthResp>('auth/register', { method: 'POST', body: input }).then((d) => {
     setTokens(d.accessToken, d.refreshToken)

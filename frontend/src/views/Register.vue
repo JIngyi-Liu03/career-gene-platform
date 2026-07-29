@@ -2,6 +2,7 @@
   <div class="auth-form">
     <h2 class="auth-title">注册账号</h2>
     <input class="nick" v-model="name" placeholder="请输入姓名" maxlength="20" />
+    <input class="nick" v-model="company" placeholder="请输入公司名称（选填）" maxlength="100" />
     <input class="nick" v-model="phone" placeholder="请输入手机号" maxlength="11" inputmode="numeric" @input="onPhoneInput" />
     <input class="nick" v-model="password" type="password" placeholder="设置密码" />
     <input class="nick" v-model="password2" type="password" placeholder="确认密码" />
@@ -34,6 +35,7 @@ import type { AuthMode } from '@/stores/authModal'
 const emit = defineEmits<{ success: []; switch: [mode: AuthMode] }>()
 
 const name = ref('')
+const company = ref('')
 const phone = ref('')
 const password = ref('')
 const password2 = ref('')
@@ -83,6 +85,7 @@ async function doRegister(): Promise<void> {
       password: password.value,
       securityQuestion: securityQuestion.value,
       securityAnswer: securityAnswer.value.trim(),
+      company: company.value.trim() || undefined,
     })
     uiStore.showToast('注册成功')
     emit('success')

@@ -155,7 +155,7 @@ async function ensurePart(p: number): Promise<void> {
 }
 
 // —— 注册 / 登录 / 找回 ——
-async function register(input: { name: string; phone: string; password: string; securityQuestion: string; securityAnswer: string }): Promise<boolean> {
+async function register(input: { name: string; phone: string; password: string; securityQuestion: string; securityAnswer: string; company?: string }): Promise<boolean> {
   if (!isValidName(input.name) || !isValidPhone(input.phone)) return false
   const d = await apiRegister(input)
   state.user = { phone: input.phone, name: input.name }

@@ -7,10 +7,11 @@ import {
   Param,
   Query,
   Req,
+  Res,
   UseGuards,
   UnauthorizedException,
 } from '@nestjs/common'
-import { Request } from 'express'
+import { Request, Response } from 'express'
 import { AdminService } from './admin.service'
 import { AdminJwtGuard } from './admin.guard'
 import type { AdminLoginDto, UpdatePartBody } from './dto'
@@ -79,5 +80,28 @@ export class AdminController {
   @Get('visits')
   getVisits(@Query('days') days: string) {
     return this.service.getVisits(parseInt(days, 10))
+  }
+
+  // 查看已完成用户的测试结果
+  @UseGuards(AdminJwtGuard)
+  @Get('users/:id/result')
+  getUserResult(@Param('id') id: string) {
+    return this.service.getUserResult(parseInt(id, 10))
+  }
+
+  // 导出用户数据（Excel / Word）
+  @UseGuards(AdminJwtGuard)
+  @Get('export')
+  async exportUsers(
+    @Query('format') format: string,
+    @Query('includeResults') includeResults: string,
+    @Res() res: Response,
+  ) {
+    const fmt = format === 'word' ? 'word' : 'excel'
+    const inc = includeResults === 'true'
+    const { buffer, filename, contentType } = await this.service.exportUsers(inc, fmt)
+    res.setHeader('Content-Type', contentType)
+    res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`)
+    res.send(buffer)
   }
 }
