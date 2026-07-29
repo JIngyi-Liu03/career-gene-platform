@@ -52,6 +52,7 @@ export interface SurveyResult {
   pdp: RadarAxis[]
   ennea: RadarAxis[]
   career: RadarAxis[]
+  answers?: Record<number, number> // 每题所选选项索引（稀疏），用于结果页回显答题记录
 }
 
 // —— API 响应类型 ——

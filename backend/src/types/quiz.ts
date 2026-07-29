@@ -62,6 +62,7 @@ export interface SurveyResult {
   pdp: RadarAxis[]
   ennea: RadarAxis[]
   career: RadarAxis[]
+  answers?: Record<number, number> // 每题所选选项索引（稀疏），用于结果页回显答题记录
 }
 
 // 后端算分函数统一产出（分类别），便于按 part 增量保存。

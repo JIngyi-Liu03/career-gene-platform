@@ -95,15 +95,19 @@ const allQuestions = computed(() => {
 })
 
 onMounted(async () => {
-  const done = surveyStore.state.doneParts
-  if (!done.every(Boolean)) { router.replace('/select'); return }
   loading.value = true
   try {
+    // 先确保题目已拉取，再从后端取结果（历史/刷新进入时本地缓存为空也能回填答题记录）。
     await surveyStore.ensureAllParts()
     let r = surveyStore.state.result
     if (!r) r = await surveyStore.loadResult()
     if (!r) r = await surveyStore.submitAll()
-    if (!r) { uiStore.showToast('暂无结果数据'); router.replace('/select') }
+    if (r) return // 已拿到结果，直接渲染
+    // 兜底：确实没有结果才回选择页。
+    const done = surveyStore.state.doneParts
+    if (!done.every(Boolean)) { router.replace('/select'); return }
+    uiStore.showToast('暂无结果数据')
+    router.replace('/select')
   } finally {
     loading.value = false
   }

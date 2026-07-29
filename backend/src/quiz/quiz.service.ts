@@ -206,18 +206,21 @@ export class QuizService {
     const a = await this.prisma.assessment.findFirst({
       where: { userId },
       orderBy: { createdAt: 'desc' },
-      include: { results: true },
+      include: { results: true, answers: true },
     })
     if (!a || a.results.length < 5) return null
     const map: Record<string, any> = {}
     a.results.forEach((r) => (map[r.category] = JSON.parse(r.payload as string)))
     if (!map.mbti || !map.disc || !map.pdp || !map.enneagram || !map.career) return null
+    const full = new Array(questions.length).fill(null)
+    a.answers.forEach((x) => (full[x.questionIndex] = x.choice))
     return {
       mbti: map.mbti,
       disc: map.disc,
       pdp: map.pdp,
       ennea: map.enneagram,
       career: map.career,
+      answers: toSparse(full),
     }
   }
 

@@ -285,6 +285,16 @@ async function submitAll(): Promise<SurveyResult | null> {
 async function loadResult(): Promise<SurveyResult | null> {
   const r = await getResult()
   state.result = r
+  // 历史/刷新进入结果页时，把后端返回的答案回填进本地缓存，保证“答题记录”能回显。
+  if (r?.answers && state.total > 0) {
+    const merged = new Array(state.total).fill(null)
+    for (let i = 0; i < state.total; i++) {
+      const v = r.answers[i]
+      if (v !== undefined) merged[i] = v
+    }
+    state.answers = merged
+    if (state.user.phone) saveAnswers(state.user.phone, merged)
+  }
   return r
 }
 
