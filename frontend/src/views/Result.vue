@@ -12,17 +12,18 @@
           <div class="nm">{{ result.mbti.name }}</div>
           <div class="ds">{{ result.mbti.desc }}</div>
         </div>
-        <div style="font-size:13px;color:#5b6b80;margin-top:14px;">各维度占比：</div>
-        <div class="bars">
-          <div class="pair" v-for="(pr, idx) in mbtiPairs" :key="idx">
-            <div class="pair-head">
-              <span style="color:#3b6ef0;font-weight:700">{{ pr.a }} {{ pr.pa }}%</span>
-              <span style="color:#f3a712;font-weight:700">{{ pr.b }} {{ pr.pb }}%</span>
+        <div style="font-size:13px;color:#5b6b80;margin-top:14px;">各维度占比（按百分比降序）：</div>
+        <div class="mbti-bars">
+          <div
+            v-for="(it, i) in mbtiLetters"
+            :key="i"
+            style="display:flex;align-items:center;gap:10px;margin:6px 0;font-size:13px;"
+          >
+            <span style="width:24px;font-weight:700;color:#1f2a44">{{ it.label }}</span>
+            <div style="flex:1;height:12px;background:#eef1f6;border-radius:6px;overflow:hidden">
+              <div :style="{ width: it.rate + '%', height: '100%', background: '#3b6ef0' }"></div>
             </div>
-            <div class="pair-track">
-              <div class="bar-fill" :style="{ background: '#3b6ef0', width: pr.pa + '%' }"></div>
-              <div class="bar-fill" :style="{ background: '#f3a712', width: pr.pb + '%' }"></div>
-            </div>
+            <span style="width:42px;text-align:right;font-weight:700;color:#5b6b80">{{ it.rate }}%</span>
           </div>
         </div>
       </div>
@@ -87,10 +88,15 @@ const discA = computed(() => sortAxes(result.value?.disc))
 const pdpA = computed(() => sortAxes(result.value?.pdp))
 const enneaA = computed(() => sortAxes(result.value?.ennea))
 const careerA = computed(() => sortAxes(result.value?.career))
-// MBTI 各维度按占比降序排列
-const mbtiPairs = computed(() => {
+// MBTI 八个字母（各维度两个极性）按占比降序排列
+const mbtiLetters = computed(() => {
   const ps = result.value?.mbti.pairs || []
-  return [...ps].sort((a, b) => Math.max(b.pa, b.pb) - Math.max(a.pa, a.pb))
+  const list: { label: string; rate: number }[] = []
+  for (const p of ps) {
+    list.push({ label: p.a, rate: p.pa })
+    list.push({ label: p.b, rate: p.pb })
+  }
+  return list.sort((a, b) => b.rate - a.rate)
 })
 
 const allQuestions = computed(() => {

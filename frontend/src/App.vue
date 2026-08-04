@@ -3,6 +3,7 @@
   <Toast />
   <ConfirmDialog />
   <ViewRecordDialog />
+  <AuthModal />
 </template>
 
 <script setup lang="ts">
@@ -10,6 +11,7 @@ import { onMounted } from 'vue'
 import Toast from '@/components/Toast.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import ViewRecordDialog from '@/components/ViewRecordDialog.vue'
+import AuthModal from '@/components/AuthModal.vue'
 import { surveyStore } from '@/stores/survey'
 import { reportVisit } from '@/api/analytics'
 import { getAccessToken } from '@/api/http'
