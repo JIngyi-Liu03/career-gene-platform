@@ -14,10 +14,10 @@
         </div>
         <div style="font-size:13px;color:#5b6b80;margin-top:14px;">各维度占比：</div>
         <div class="bars">
-          <div class="pair" v-for="(pr, idx) in result.mbti.pairs" :key="idx">
+          <div class="pair" v-for="(pr, idx) in mbtiPairs" :key="idx">
             <div class="pair-head">
-              <span style="color:#3b6ef0;font-weight:700">{{ mapMbtiPair(pr).a }} {{ pr.pa }}%</span>
-              <span style="color:#f3a712;font-weight:700">{{ mapMbtiPair(pr).b }} {{ pr.pb }}%</span>
+              <span style="color:#3b6ef0;font-weight:700">{{ pr.a }} {{ pr.pa }}%</span>
+              <span style="color:#f3a712;font-weight:700">{{ pr.b }} {{ pr.pb }}%</span>
             </div>
             <div class="pair-track">
               <div class="bar-fill" :style="{ background: '#3b6ef0', width: pr.pa + '%' }"></div>
@@ -27,10 +27,10 @@
         </div>
       </div>
 
-      <ResultCard title="DISC · 行为与沟通风格" :axes="mappedDisc" color="#e4572e" />
-      <ResultCard title="PDP · 能量特质与气场" :axes="mappedPdp" color="#3b6ef0" />
-      <ResultCard title="九型 · 核心动机与注意力焦点" :axes="mappedEnnea" color="#10b3a3" />
-      <CareerCard :axes="mappedCareer" color="#8b5cf6" />
+      <ResultCard title="DISC · 行为与沟通风格（按占比降序）" :axes="discA" color="#e4572e" />
+      <ResultCard title="PDP · 能量特质与气场（按占比降序）" :axes="pdpA" color="#3b6ef0" />
+      <ResultCard title="九型 · 核心动机与注意力焦点（按占比降序）" :axes="enneaA" color="#10b3a3" />
+      <CareerCard :axes="careerA" color="#8b5cf6" />
 
       <!-- 答题记录 -->
       <div class="answer-record">
@@ -56,8 +56,9 @@
         </div>
       </div>
 
-      <div class="result-actions no-print" style="display:flex;justify-content:center;margin-top:8px">
-        <button class="back-link" @click="back">返回选择页</button>
+      <div class="result-actions no-print" style="display:flex;gap:12px;margin-top:8px">
+        <button class="go" style="flex:1" @click="back">返回选择页</button>
+        <button class="go" style="flex:1;background:var(--accent);color:#fff" @click="printReport">下载 PDF 报告</button>
       </div>
     </template>
   </div>
@@ -70,17 +71,27 @@ import ResultCard from '@/components/ResultCard.vue'
 import CareerCard from '@/components/CareerCard.vue'
 import { surveyStore } from '@/stores/survey'
 import { uiStore } from '@/stores/ui'
-import { mapAxisLabels, mapMbtiPair } from '@/utils/labels'
+import { getReportUrl } from '@/api/http'
 import type { SurveyResult, RadarAxis } from '@/types/quiz'
 
 const router = useRouter()
 const loading = ref(false)
 const result = computed<SurveyResult | null>(() => surveyStore.state.result)
 
-const mappedDisc = computed<RadarAxis[]>(() => mapAxisLabels(result.value?.disc as RadarAxis[], 'disc'))
-const mappedPdp = computed<RadarAxis[]>(() => mapAxisLabels(result.value?.pdp as RadarAxis[], 'pdp'))
-const mappedEnnea = computed<RadarAxis[]>(() => mapAxisLabels(result.value?.ennea as RadarAxis[], 'ennea'))
-const mappedCareer = computed<RadarAxis[]>(() => mapAxisLabels(result.value?.career as RadarAxis[], 'career'))
+// 维度按百分比从大到小排序（参考要求：测试结果按百分比降序排列维度）。
+function sortAxes(axes?: RadarAxis[]): RadarAxis[] {
+  if (!axes) return []
+  return [...axes].sort((a, b) => b.rate - a.rate)
+}
+const discA = computed(() => sortAxes(result.value?.disc))
+const pdpA = computed(() => sortAxes(result.value?.pdp))
+const enneaA = computed(() => sortAxes(result.value?.ennea))
+const careerA = computed(() => sortAxes(result.value?.career))
+// MBTI 各维度按占比降序排列
+const mbtiPairs = computed(() => {
+  const ps = result.value?.mbti.pairs || []
+  return [...ps].sort((a, b) => Math.max(b.pa, b.pb) - Math.max(a.pa, a.pb))
+})
 
 const allQuestions = computed(() => {
   const arr: { text: string; options: string[]; chosen: number | null }[] = []
@@ -95,39 +106,24 @@ const allQuestions = computed(() => {
 })
 
 onMounted(async () => {
+  const done = surveyStore.state.doneParts
+  if (!done.every(Boolean)) { router.replace('/select'); return }
   loading.value = true
   try {
-    // 先确保题目已拉取，再从后端取结果（历史/刷新进入时本地缓存为空也能回填答题记录）。
     await surveyStore.ensureAllParts()
     let r = surveyStore.state.result
     if (!r) r = await surveyStore.loadResult()
     if (!r) r = await surveyStore.submitAll()
-    if (r) return // 已拿到结果，直接渲染
-    // 兜底：确实没有结果才回选择页。
-    const done = surveyStore.state.doneParts
-    if (!done.every(Boolean)) { router.replace('/select'); return }
-    uiStore.showToast('暂无结果数据')
-    router.replace('/select')
+    if (!r) { uiStore.showToast('暂无结果数据'); router.replace('/select') }
   } finally {
     loading.value = false
   }
 })
 
 function back(): void { router.push('/select') }
+function printReport(): void { window.open(getReportUrl(), '_blank') }
 </script>
 
 <style scoped>
 .loading-tip { text-align: center; color: var(--sub); padding: 40px 0; }
-
-.back-link {
-  background: none;
-  border: none;
-  border-bottom: 1.5px solid var(--accent);
-  color: var(--accent);
-  font-size: 15px;
-  font-weight: 500;
-  padding: 4px 2px;
-  cursor: pointer;
-}
-.back-link:hover { opacity: 0.75; }
 </style>

@@ -1,6 +1,5 @@
 <template>
   <router-view />
-  <AuthModal />
   <Toast />
   <ConfirmDialog />
   <ViewRecordDialog />
@@ -8,7 +7,6 @@
 
 <script setup lang="ts">
 import { onMounted } from 'vue'
-import AuthModal from '@/components/AuthModal.vue'
 import Toast from '@/components/Toast.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import ViewRecordDialog from '@/components/ViewRecordDialog.vue'

@@ -4,7 +4,7 @@ import { AuthService } from './auth.service'
 import { JwtAuthGuard } from './jwt.guard'
 import { GetUser } from './get-user.decorator'
 import { SECURITY_QUESTIONS } from '../quiz/desc.data'
-import type { RegisterDto, LoginDto, RecoverDto, RefreshDto } from './dto'
+import type { RegisterDto, LoginDto, RecoverDto, RefreshDto, AuthTokens, SendSmsDto, SmsRegisterDto, SmsResetDto } from './dto'
 
 @Controller('auth')
 export class AuthController {
@@ -49,5 +49,26 @@ export class AuthController {
   async me(@GetUser() user: { userId: number; phone: string }) {
     if (!user) throw new UnauthorizedException()
     return { userId: user.userId, phone: user.phone }
+  }
+
+  // 发送短信验证码（注册 / 重置密码场景）：每 IP 每分钟最多 5 次。
+  @Throttle({ global: { limit: 5, ttl: 60000 } })
+  @Post('sms/send')
+  sendSms(@Body() dto: SendSmsDto) {
+    return this.service.sendSms(dto)
+  }
+
+  // 短信验证码注册：校验验证码后创建用户。
+  @Throttle({ global: { limit: 5, ttl: 60000 } })
+  @Post('sms/register')
+  registerWithSms(@Body() dto: SmsRegisterDto) {
+    return this.service.registerWithSms(dto)
+  }
+
+  // 短信验证码重置密码：仅更新密码，保留测评历史。
+  @Throttle({ global: { limit: 5, ttl: 60000 } })
+  @Post('sms/reset-password')
+  resetPasswordWithSms(@Body() dto: SmsResetDto) {
+    return this.service.resetPasswordWithSms(dto)
   }
 }

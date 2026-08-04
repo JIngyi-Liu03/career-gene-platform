@@ -1,6 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import Login from '@/views/Login.vue'
-import QuestionBank from '@/views/QuestionBank.vue'
 import UserPanel from '@/views/UserPanel.vue'
 import { hasToken } from '@/api/http'
 
@@ -8,9 +7,9 @@ const router = createRouter({
   history: createWebHistory(),
   routes: [
     { path: '/login', component: Login, meta: { public: true } },
-    { path: '/', component: QuestionBank, meta: { requiresAuth: true } },
+    { path: '/', redirect: '/users' },
     { path: '/users', component: UserPanel, meta: { requiresAuth: true } },
-    { path: '/:pathMatch(.*)*', redirect: '/' },
+    { path: '/:pathMatch(.*)*', redirect: '/users' },
   ],
 })
 

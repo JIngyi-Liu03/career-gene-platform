@@ -5,7 +5,6 @@ export interface RegisterDto {
   password: string
   securityQuestion: string
   securityAnswer: string
-  company?: string
 }
 
 export interface LoginDto {
@@ -23,6 +22,24 @@ export interface RecoverDto {
 
 export interface RefreshDto {
   refreshToken: string
+}
+
+export interface SendSmsDto {
+  phone: string
+  scene: 'register' | 'reset'
+}
+
+export interface SmsRegisterDto {
+  phone: string
+  name: string
+  code: string
+  password: string
+}
+
+export interface SmsResetDto {
+  phone: string
+  code: string
+  newPassword: string
 }
 
 export interface AuthTokens {

@@ -2,7 +2,7 @@
 // 不再持有题库/算分：只负责拉题、缓存答案(翻页体验+离线兜底)、调接口、渲染状态。
 import { reactive, computed } from 'vue'
 import { getMeta, getPart, submitPart as apiSubmitPart, submitAll as apiSubmitAll, getProgress, getResult } from '@/api/quiz'
-import { login as apiLogin, register as apiRegister } from '@/api/auth'
+import { login as apiLogin, registerWithSms as apiRegisterWithSms, resetPasswordWithSms as apiResetPasswordWithSms } from '@/api/auth'
 import { hasTokens, clearTokens } from '@/api/http'
 import { isValidPhone, isValidName } from '@/utils/validator'
 import type { SurveyResult, QuestionDto, PartMeta } from '@/types/quiz'
@@ -155,14 +155,20 @@ async function ensurePart(p: number): Promise<void> {
 }
 
 // —— 注册 / 登录 / 找回 ——
-async function register(input: { name: string; phone: string; password: string; securityQuestion: string; securityAnswer: string; company?: string }): Promise<boolean> {
+async function register(input: { name: string; phone: string; code: string; password: string }): Promise<boolean> {
   if (!isValidName(input.name) || !isValidPhone(input.phone)) return false
-  const d = await apiRegister(input)
+  const d = await apiRegisterWithSms(input)
   state.user = { phone: input.phone, name: input.name }
   saveUser(state.user)
   state.doneParts = d.doneParts || [false, false, false, false, false]
   const cached = loadAnswers(input.phone)
   if (cached) state.answers = cached
+  return true
+}
+
+// 短信验证码重置密码：仅更新密码，成功后需重新登录。
+async function resetPassword(input: { phone: string; code: string; newPassword: string }): Promise<boolean> {
+  await apiResetPasswordWithSms(input)
   return true
 }
 
@@ -285,16 +291,6 @@ async function submitAll(): Promise<SurveyResult | null> {
 async function loadResult(): Promise<SurveyResult | null> {
   const r = await getResult()
   state.result = r
-  // 历史/刷新进入结果页时，把后端返回的答案回填进本地缓存，保证“答题记录”能回显。
-  if (r?.answers && state.total > 0) {
-    const merged = new Array(state.total).fill(null)
-    for (let i = 0; i < state.total; i++) {
-      const v = r.answers[i]
-      if (v !== undefined) merged[i] = v
-    }
-    state.answers = merged
-    if (state.user.phone) saveAnswers(state.user.phone, merged)
-  }
   return r
 }
 
@@ -323,6 +319,7 @@ export const surveyStore = {
   ensureAllParts,
   register,
   login,
+  resetPassword,
   logout,
   startChapter,
   enterChapter,

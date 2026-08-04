@@ -108,7 +108,8 @@
 
 <script setup lang="ts">
 import { onMounted } from 'vue'
-import { authModal } from '@/stores/authModal'
+import { useRouter } from 'vue-router'
+const router = useRouter()
 const gallery = [
   { name: '精准招聘', desc: '基于职场基因数据评估候选人与岗位的适配度，降低招人试错成本，提升录用准确率。' },
   { name: '人岗匹配', desc: '清晰掌握每位成员的特质与优势，科学分配岗位、安排协作，把对的人放在对的位置。' },
@@ -120,7 +121,7 @@ const gallery = [
   { name: '破局晋升', desc: '精准定位你的发展瓶颈与短板，结合数据给出针对性成长路径，助力突破职业天花板。' },
 ]
 function goLogin(): void {
-  authModal.openAuth('login')
+  router.push('/login')
 }
 onMounted(() => {
   const els = document.querySelectorAll<HTMLElement>('.reveal')

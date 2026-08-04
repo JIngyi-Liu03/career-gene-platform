@@ -1,13 +1,13 @@
 <template>
   <div class="auth-card">
-    <h2 class="auth-title">注册账号</h2>
-    <p class="auth-sub">手机号 + 短信验证码，30 秒完成注册</p>
+    <h2 class="auth-title">找回密码</h2>
+    <p class="auth-sub">通过手机号 + 短信验证码重置密码</p>
 
     <form class="auth-form" @submit.prevent="submit">
       <label class="field">
         <span>手机号</span>
         <div class="phone-line">
-          <input v-model.trim="phone" type="tel" inputmode="numeric" maxlength="11" placeholder="请输入手机号" :disabled="sent" />
+          <input v-model.trim="phone" type="tel" inputmode="numeric" maxlength="11" placeholder="请输入注册手机号" :disabled="sent" />
           <button type="button" class="code-btn" :disabled="cooldown > 0 || sending" @click="sendCode">
             {{ cooldown > 0 ? cooldown + 's 后重发' : '获取验证码' }}
           </button>
@@ -22,27 +22,22 @@
           <input v-model.trim="code" type="text" inputmode="numeric" maxlength="6" placeholder="请输入 6 位验证码" />
         </label>
         <label class="field">
-          <span>姓名</span>
-          <input v-model.trim="name" type="text" placeholder="请输入你的姓名" />
-        </label>
-        <label class="field">
-          <span>密码</span>
+          <span>新密码</span>
           <input v-model="password" type="password" placeholder="至少 6 位" />
         </label>
         <label class="field">
-          <span>确认密码</span>
+          <span>确认新密码</span>
           <input v-model="confirm" type="password" placeholder="再次输入密码" />
         </label>
       </template>
 
       <button class="btn-primary" type="submit" :disabled="loading || !sent">
-        {{ loading ? '注册中…' : '注册并登录' }}
+        {{ loading ? '重置中…' : '重置密码' }}
       </button>
     </form>
 
     <p class="auth-foot">
-      已有账号？
-      <button type="button" class="link" @click="$emit('switch', 'login')">去登录</button>
+      <button type="button" class="link" @click="$emit('switch', 'login')">返回登录</button>
     </p>
   </div>
 </template>
@@ -52,13 +47,12 @@ import { ref, onUnmounted } from 'vue'
 import { surveyStore } from '@/stores/survey'
 import { uiStore } from '@/stores/ui'
 import { sendSmsCode } from '@/api/auth'
-import { isValidPhone, isValidName, isValidPassword } from '@/utils/validator'
+import { isValidPhone, isValidPassword } from '@/utils/validator'
 
-const emit = defineEmits<{ success: []; switch: [mode: 'login' | 'register' | 'reset'] }>()
+const emit = defineEmits<{ success: []; switch: [mode: 'login' | 'register' | 'reset', phone?: string] }>()
 
 const phone = ref('')
 const code = ref('')
-const name = ref('')
 const password = ref('')
 const confirm = ref('')
 const sent = ref(false)
@@ -87,7 +81,7 @@ async function sendCode() {
   if (cooldown.value > 0) return
   sending.value = true
   try {
-    const res = await sendSmsCode(phone.value, 'register')
+    const res = await sendSmsCode(phone.value, 'reset')
     if (res.devCode) devCode.value = res.devCode
     sent.value = true
     startCooldown()
@@ -112,12 +106,8 @@ async function submit() {
     uiStore.showToast('请输入验证码')
     return
   }
-  if (!isValidName(name.value)) {
-    uiStore.showToast('请填写姓名')
-    return
-  }
   if (!isValidPassword(password.value)) {
-    uiStore.showToast('密码至少 6 位')
+    uiStore.showToast('新密码至少 6 位')
     return
   }
   if (password.value !== confirm.value) {
@@ -126,16 +116,19 @@ async function submit() {
   }
   loading.value = true
   try {
-    const ok = await surveyStore.register({
+    const ok = await surveyStore.resetPassword({
       phone: phone.value,
-      name: name.value,
       code: code.value,
-      password: password.value,
+      newPassword: password.value,
     })
-    if (ok) emit('success')
-    else uiStore.showToast('注册失败，请重试')
+    if (ok) {
+      uiStore.showToast('密码已重置，请用新密码登录')
+      emit('switch', 'login', phone.value)
+    } else {
+      uiStore.showToast('重置失败，请重试')
+    }
   } catch (e: any) {
-    uiStore.showToast(e?.message || '注册失败')
+    uiStore.showToast(e?.message || '重置失败')
   } finally {
     loading.value = false
   }
