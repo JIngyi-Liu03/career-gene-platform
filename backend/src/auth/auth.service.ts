@@ -70,9 +70,10 @@ export class AuthService {
 
     const passwordHash = await bcrypt.hash(dto.password, 10)
     const securityAnswerHash = await bcrypt.hash(dto.securityAnswer.trim(), 10)
+    const company = (dto.company || '').trim()
 
     const user = await this.prisma.user.create({
-      data: { phone, name, passwordHash, securityQuestion: dto.securityQuestion, securityAnswerHash },
+      data: { phone, name, company, passwordHash, securityQuestion: dto.securityQuestion, securityAnswerHash },
     })
     const tokens = this.issueTokens(user.id, user.phone)
     return { ...tokens, doneParts: await this.computeDoneParts(user.id) }
@@ -146,8 +147,9 @@ export class AuthService {
     if (!consume.ok) throw new BadRequestException(consume.error)
 
     const passwordHash = await bcrypt.hash(dto.password, 10)
+    const company = (dto.company || '').trim()
     const user = await this.prisma.user.create({
-      data: { phone, name, passwordHash, securityQuestion: '', securityAnswerHash: '' },
+      data: { phone, name, company, passwordHash, securityQuestion: '', securityAnswerHash: '' },
     })
     const tokens = this.issueTokens(user.id, user.phone)
     return { ...tokens, doneParts: await this.computeDoneParts(user.id) }

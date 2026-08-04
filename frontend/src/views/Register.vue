@@ -5,6 +5,10 @@
       <input v-model.trim="name" type="text" maxlength="20" placeholder="请输入姓名" />
     </label>
     <label class="field">
+      <span>公司</span>
+      <input v-model.trim="company" type="text" maxlength="60" placeholder="请输入您现在所在公司名称" />
+    </label>
+    <label class="field">
       <span>手机号</span>
       <input v-model.trim="phone" type="tel" inputmode="numeric" maxlength="11" placeholder="请输入手机号" />
     </label>
@@ -47,6 +51,7 @@ const emit = defineEmits<{ success: []; switch: [mode: 'login' | 'register' | 'r
 
 const phone = ref('')
 const name = ref('')
+const company = ref('')
 const code = ref('')
 const password = ref('')
 const confirm = ref('')
@@ -108,6 +113,7 @@ async function submit() {
     const ok = await surveyStore.register({
       phone: phone.value,
       name: name.value,
+      company: company.value,
       code: code.value,
       password: password.value,
     })

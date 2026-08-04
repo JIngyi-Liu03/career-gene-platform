@@ -2,6 +2,7 @@
 export interface RegisterDto {
   phone: string
   name: string
+  company?: string
   password: string
   securityQuestion: string
   securityAnswer: string
@@ -32,6 +33,7 @@ export interface SendSmsDto {
 export interface SmsRegisterDto {
   phone: string
   name: string
+  company?: string
   code: string
   password: string
 }

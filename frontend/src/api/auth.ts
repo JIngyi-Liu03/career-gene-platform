@@ -40,6 +40,7 @@ export function sendSmsCode(
 export function registerWithSms(p: {
   phone: string
   name: string
+  company?: string
   code: string
   password: string
 }): Promise<{ accessToken: string; refreshToken: string; doneParts: boolean[] }> {
