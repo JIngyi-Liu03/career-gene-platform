@@ -11,7 +11,6 @@
         <div class="type-box">
           <div class="big">{{ result.mbti.type }}</div>
         </div>
-        <div class="sub-label">各维度占比（按百分比降序）：</div>
         <div class="mbti-bars">
           <div
             v-for="(it, i) in mbtiLetters"
@@ -154,7 +153,6 @@ function back(): void { router.push('/select') }
 .type-box .big {
   font-size: 54px;
 }
-.sub-label { font-size: 13px; color: #5b6b80; margin-top: 8px; margin-bottom: 4px; }
 /* 返回按钮：底部居中 */
 .result-actions { text-align: center; margin-top: 16px; }
 .text-btn {
