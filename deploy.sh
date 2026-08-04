@@ -34,6 +34,9 @@ cd "$ROOT_DIR"
 echo "==> [3/4] 从模板生成 prisma schema（服务器用 PostgreSQL）并重建启动容器"
 cp backend/prisma/schema.prisma.example backend/prisma/schema.prisma
 docker compose up -d --build
+# 强制重建 nginx：重新绑定 frontend/dist，避免 `npm run build` 重建 dist 目录后
+# 旧的 bind mount 仍指向失效 inode，导致容器内目录为空、nginx 返回 403。
+docker compose up -d --force-recreate nginx
 
 echo "==> [4/4] 等待后端就绪（GET /api/health）"
 HEALTHY=0
