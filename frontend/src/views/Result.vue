@@ -137,7 +137,7 @@ function back(): void { router.push('/select') }
   border: 1px solid var(--line);
   border-radius: 14px;
   padding: 14px 18px;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
   box-shadow: 0 2px 10px rgba(31, 42, 68, 0.04);
 }
 .block-title {

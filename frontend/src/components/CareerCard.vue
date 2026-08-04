@@ -33,9 +33,13 @@ const dominant = computed(() => {
   border: 1px solid var(--line);
   border-radius: 14px;
   padding: 14px 18px;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
+  /* 覆盖 style.css 里遗留的 .card 旧规则（min-height:62vh / display:flex） */
+  min-height: 0;
+  display: block;
   box-shadow: 0 2px 10px rgba(31, 42, 68, 0.04);
 }
+.card h3 { margin: 0 0 8px; font-size: 16px; color: #1f2a44; font-weight: 700; }
 .bar-row {
   display: flex;
   align-items: center;
