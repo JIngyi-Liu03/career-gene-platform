@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common'
-import tencentcloud from 'tencentcloud-sdk-nodejs-sms'
+import * as tencentcloud from 'tencentcloud-sdk-nodejs-sms'
 
 export type SmsScene = 'register' | 'reset'
 
