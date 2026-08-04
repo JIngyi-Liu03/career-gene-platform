@@ -58,7 +58,8 @@ async function submit() {
 
 <style scoped>
 .auth-form { display: flex; flex-direction: column; gap: 14px; }
-.field { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--ink); }
+.field { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: var(--ink); text-align: left; }
+.field > span { text-align: left; align-self: flex-start; }
 .field input {
   height: 44px; padding: 0 14px; border-radius: 10px;
   border: 1px solid var(--line); background: #fff; color: var(--ink); font-size: 15px;

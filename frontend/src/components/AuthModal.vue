@@ -88,7 +88,7 @@ function onSwitch(mode: 'login' | 'register' | 'reset', phone?: string): void {
   right: 18px;
   background: none;
   border: none;
-  color: var(--muted);
+  color: var(--blue);
   font-size: 13px;
   cursor: pointer;
   padding: 0;
