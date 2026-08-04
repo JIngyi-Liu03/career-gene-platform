@@ -439,11 +439,11 @@
 
   .result-head{text-align:center;background:linear-gradient(135deg,#3b6ef0,#10b3a3);color:#fff;border-radius:16px;
 
-              padding:28px 26px;margin-bottom:20px;}
+              padding:18px 22px;margin-bottom:14px;}
 
-  .result-head h2{margin:0 0 4px;font-size:22px;}
+  .result-head h2{margin:0 0 4px;font-size:20px;}
 
-  .type-box{text-align:center;background:#eef3ff;border-radius:14px;padding:22px;margin:14px 0;}
+  .type-box{text-align:center;background:#eef3ff;border-radius:14px;padding:16px;margin:12px 0;}
 
   .type-box .big{font-size:40px;font-weight:800;letter-spacing:4px;color:var(--accent);}
 

@@ -16,14 +16,18 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { mapEnneaLetter } from '@/utils/labels'
 import type { RadarAxis } from '@/types/quiz'
 
 const props = defineProps<{ title?: string; axes: RadarAxis[]; color: string }>()
 
+// 九型人格：主导维度展示为「序号·类型」（如 1号·完美型），其余原样
+const isEnnea = computed(() => (props.title || '').startsWith('九型'))
 const dominant = computed(() => {
   const xs = props.axes || []
   if (!xs.length) return null
-  return xs.reduce((a, b) => (b.rate > a.rate ? b : a), xs[0])
+  const top = xs.reduce((a, b) => (b.rate > a.rate ? b : a), xs[0])
+  return { ...top, label: isEnnea.value ? mapEnneaLetter(top.label) : top.label }
 })
 </script>
 
@@ -32,8 +36,8 @@ const dominant = computed(() => {
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: 14px;
-  padding: 22px 24px;
-  margin-bottom: 16px;
+  padding: 16px 18px;
+  margin-bottom: 12px;
   box-shadow: 0 2px 10px rgba(31, 42, 68, 0.04);
 }
 .bar-row {

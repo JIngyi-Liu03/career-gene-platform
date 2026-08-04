@@ -1,18 +1,19 @@
 <template>
   <div id="result">
-    <div class="result-head"><h2>🎯 你的职场基因画像</h2></div>
+    <div class="result-head"><h2>你的职场基因画像</h2></div>
 
     <div v-if="loading" class="loading-tip">正在生成报告…</div>
 
     <template v-if="result">
       <!-- MBTI -->
-      <div style="background:transparent;border:none;box-shadow:none;border-radius:0;padding:8px 0;margin-bottom:16px;">
+      <div class="block">
+        <div class="block-title">MBTI · 人格类型</div>
         <div class="type-box">
           <div class="big">{{ result.mbti.type }}</div>
           <div class="nm">{{ result.mbti.name }}</div>
           <div class="ds">{{ result.mbti.desc }}</div>
         </div>
-        <div style="font-size:13px;color:#5b6b80;margin-top:14px;">各维度占比（按百分比降序）：</div>
+        <div class="sub-label">各维度占比（按百分比降序）：</div>
         <div class="mbti-bars">
           <div
             v-for="(it, i) in mbtiLetters"
@@ -28,9 +29,9 @@
         </div>
       </div>
 
-      <ResultCard title="DISC · 行为与沟通风格（按占比降序）" :axes="discA" color="#e4572e" />
-      <ResultCard title="PDP · 能量特质与气场（按占比降序）" :axes="pdpA" color="#3b6ef0" />
-      <ResultCard title="九型 · 核心动机与注意力焦点（按占比降序）" :axes="enneaA" color="#10b3a3" />
+      <ResultCard title="DISC · 行为与沟通风格" :axes="discA" color="#e4572e" />
+      <ResultCard title="PDP · 能量特质与气场" :axes="pdpA" color="#3b6ef0" />
+      <ResultCard title="九型 · 核心动机与注意力焦点" :axes="enneaA" color="#10b3a3" />
       <CareerCard :axes="careerA" color="#8b5cf6" />
 
       <!-- 答题记录 -->
@@ -130,6 +131,17 @@ function back(): void { router.push('/select') }
 
 <style scoped>
 .loading-tip { text-align: center; color: var(--sub); padding: 40px 0; }
+/* 板块之间用紧凑的空白隔开，而不是大留白 */
+.block { padding: 12px 0; }
+.block + .result-card,
+.result-card + .result-card { margin-top: 8px; }
+.block-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1f2a44;
+  margin-bottom: 10px;
+}
+.sub-label { font-size: 13px; color: #5b6b80; margin-top: 14px; margin-bottom: 4px; }
 .text-btn {
   background: none;
   border: none;
