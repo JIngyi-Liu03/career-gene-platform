@@ -18,7 +18,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { mapEnneaLetter } from '@/utils/labels'
+import { mapEnneaLetter, stripTypeLetter } from '@/utils/labels'
 import type { RadarAxis } from '@/types/quiz'
 
 const props = defineProps<{ title?: string; axes: RadarAxis[]; color: string }>()
@@ -29,7 +29,8 @@ const dominant = computed(() => {
   const xs = props.axes || []
   if (!xs.length) return null
   const top = xs.reduce((a, b) => (b.rate > a.rate ? b : a), xs[0])
-  return { ...top, label: isEnnea.value ? mapEnneaLetter(top.label) : top.label }
+  const label = isEnnea.value ? mapEnneaLetter(top.label) : top.label
+  return { ...top, label: stripTypeLetter(label) }
 })
 </script>
 

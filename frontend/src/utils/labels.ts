@@ -68,3 +68,8 @@ export function mapEnneaLetter(label: string): string {
 export function enneaNumber(label: string): string {
   return ENNEA_LETTER_TO_NUM[label] ?? label
 }
+
+/** 去掉类型名末尾的单个拉丁字母（如「服从型C」→「服从型」），用于非 MBTI 板块的最终结果展示 */
+export function stripTypeLetter(label: string): string {
+  return label.replace(/[A-Za-z]$/, '')
+}

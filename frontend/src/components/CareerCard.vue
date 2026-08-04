@@ -18,6 +18,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { stripTypeLetter } from '@/utils/labels'
 import type { RadarAxis } from '@/types/quiz'
 
 const props = defineProps<{ axes: RadarAxis[]; color: string }>()
@@ -25,7 +26,8 @@ const props = defineProps<{ axes: RadarAxis[]; color: string }>()
 const dominant = computed(() => {
   const xs = props.axes || []
   if (!xs.length) return null
-  return xs.reduce((a, b) => (b.rate > a.rate ? b : a), xs[0])
+  const top = xs.reduce((a, b) => (b.rate > a.rate ? b : a), xs[0])
+  return { ...top, label: stripTypeLetter(top.label) }
 })
 </script>
 

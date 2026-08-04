@@ -144,6 +144,10 @@ function back(): void { router.push('/select') }
   font-weight: 700;
   color: #1f2a44;
 }
+/* MBTI 类型为拉丁字母，同字号下视觉小于中文，放大以与其余板块类型展示视觉一致 */
+.type-box .big {
+  font-size: 54px;
+}
 .sub-label { font-size: 13px; color: #5b6b80; margin-top: 8px; margin-bottom: 4px; }
 /* 返回按钮：底部居中 */
 .result-actions { text-align: center; margin-top: 16px; }
