@@ -1,6 +1,9 @@
 <template>
   <div class="card">
     <h3>职业锚 · 职业价值与内在驱动力</h3>
+    <div v-if="dominant" class="type-box">
+      <div class="big">{{ dominant.label }}</div>
+    </div>
     <div class="bar-list">
       <div v-for="(ax, i) in axes" :key="i" class="bar-row">
         <span class="bar-label">{{ ax.label }}</span>
@@ -10,7 +13,6 @@
         </div>
       </div>
     </div>
-    <div v-if="dominant" class="dominant">主导锚点：{{ dominant.label }} {{ dominant.rate }}%</div>
   </div>
 </template>
 
@@ -70,11 +72,5 @@ const dominant = computed(() => {
   text-align: left;
   font-weight: 700;
   color: #5b6b80;
-}
-.dominant {
-  margin-top: 8px;
-  font-size: 14px;
-  font-weight: 700;
-  color: #1f2a44;
 }
 </style>

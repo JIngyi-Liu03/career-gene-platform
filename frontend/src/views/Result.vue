@@ -10,8 +10,6 @@
         <div class="block-title">MBTI · 人格类型</div>
         <div class="type-box">
           <div class="big">{{ result.mbti.type }}</div>
-          <div class="nm">{{ result.mbti.name }}</div>
-          <div class="ds">{{ result.mbti.desc }}</div>
         </div>
         <div class="sub-label">各维度占比（按百分比降序）：</div>
         <div class="mbti-bars">
@@ -141,10 +139,10 @@ function back(): void { router.push('/select') }
   box-shadow: 0 2px 10px rgba(31, 42, 68, 0.04);
 }
 .block-title {
+  margin: 0 0 8px;
   font-size: 16px;
   font-weight: 700;
   color: #1f2a44;
-  margin-bottom: 10px;
 }
 .sub-label { font-size: 13px; color: #5b6b80; margin-top: 8px; margin-bottom: 4px; }
 /* 返回按钮：底部居中 */
