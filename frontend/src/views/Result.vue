@@ -143,6 +143,12 @@ function back(): void { router.push('/select') }
   font-size: 16px;
   font-weight: 700;
   color: #1f2a44;
+  /* 覆盖全局 .block-title 的居中与渐变文本，确保与 DISC h3 样式完全一致 */
+  text-align: left;
+  background: none;
+  -webkit-background-clip: initial;
+  background-clip: initial;
+  -webkit-text-fill-color: initial;
 }
 /* MBTI 类型为拉丁字母，同字号下视觉小于中文，放大以与其余板块类型展示视觉一致 */
 .type-box .big {
