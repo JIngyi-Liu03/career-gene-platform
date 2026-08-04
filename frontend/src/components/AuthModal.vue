@@ -38,7 +38,7 @@ const router = useRouter()
 
 const title = computed(() => {
   if (authModal.state.mode === 'register') return '注册账号'
-  if (authModal.state.mode === 'reset') return '找回密码'
+  if (authModal.state.mode === 'reset') return '重置密码'
   return '登录账号'
 })
 

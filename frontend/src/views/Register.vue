@@ -1,12 +1,12 @@
 <template>
   <form class="auth-form" @submit.prevent="submit">
     <label class="field">
-      <span>手机号</span>
-      <input v-model.trim="phone" type="tel" inputmode="numeric" maxlength="11" placeholder="请输入手机号" />
-    </label>
-    <label class="field">
       <span>姓名</span>
       <input v-model.trim="name" type="text" maxlength="20" placeholder="请输入姓名" />
+    </label>
+    <label class="field">
+      <span>手机号</span>
+      <input v-model.trim="phone" type="tel" inputmode="numeric" maxlength="11" placeholder="请输入手机号" />
     </label>
     <label class="field">
       <span>验证码</span>
