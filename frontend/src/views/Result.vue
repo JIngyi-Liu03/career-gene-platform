@@ -58,7 +58,7 @@
         </div>
       </div>
 
-      <div class="result-actions no-print" style="margin-top:8px">
+      <div class="result-actions no-print">
         <button class="text-btn" @click="back">返回选择页</button>
       </div>
     </template>
@@ -131,10 +131,15 @@ function back(): void { router.push('/select') }
 
 <style scoped>
 .loading-tip { text-align: center; color: var(--sub); padding: 40px 0; }
-/* 板块之间用紧凑的空白隔开，而不是大留白 */
-.block { padding: 12px 0; }
-.block + .result-card,
-.result-card + .result-card { margin-top: 8px; }
+/* MBTI 板块：与其他结果卡片完全一致的白底卡片样式 */
+.block {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 16px 18px;
+  margin-bottom: 12px;
+  box-shadow: 0 2px 10px rgba(31, 42, 68, 0.04);
+}
 .block-title {
   font-size: 16px;
   font-weight: 700;
@@ -142,10 +147,12 @@ function back(): void { router.push('/select') }
   margin-bottom: 10px;
 }
 .sub-label { font-size: 13px; color: #5b6b80; margin-top: 14px; margin-bottom: 4px; }
+/* 返回按钮：底部居中 */
+.result-actions { text-align: center; margin-top: 16px; }
 .text-btn {
   background: none;
   border: none;
-  padding: 6px 0;
+  padding: 8px 0;
   color: var(--accent);
   font-size: 14px;
   cursor: pointer;
