@@ -22,8 +22,16 @@ echo "[deploy] build admin"
 cd ../admin && npm ci && npm run build
 cd ..
 
+# schema.prisma 未入 git（本地 dev 用 SQLite 版，服务器用 PostgreSQL 版），每次从 example 重新生成
+echo "[deploy] generate prisma schema (postgres)"
+cp backend/prisma/schema.prisma.example backend/prisma/schema.prisma
+
 echo "[deploy] docker compose up"
 sudo docker compose up -d --build
+
+# npm run build 重建 dist 后 bind mount 可能指向失效 inode，强制重建 nginx 重新挂载，避免 403
+echo "[deploy] force-recreate nginx (rebind dist)"
+sudo docker compose up -d --force-recreate nginx
 
 echo "[deploy] wait health (max ~80s)"
 for i in $(seq 1 40); do

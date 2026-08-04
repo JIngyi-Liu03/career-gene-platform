@@ -4,10 +4,10 @@
     <div class="bar-list">
       <div v-for="(ax, i) in axes" :key="i" class="bar-row">
         <span class="bar-label">{{ ax.label }}</span>
+        <span class="bar-rate">{{ ax.rate }}%</span>
         <div class="bar-track">
           <div class="bar-fill" :style="{ width: ax.rate + '%', background: color }"></div>
         </div>
-        <span class="bar-rate">{{ ax.rate }}%</span>
       </div>
     </div>
     <div v-if="dominant" class="dominant">主导维度：{{ dominant.label }} {{ dominant.rate }}%</div>
@@ -70,9 +70,9 @@ const dominant = computed(() => {
   height: 100%;
 }
 .bar-rate {
-  width: 42px;
+  width: 48px;
   flex: none;
-  text-align: right;
+  text-align: left;
   font-weight: 700;
   color: #5b6b80;
 }

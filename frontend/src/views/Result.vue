@@ -21,18 +21,18 @@
             style="display:flex;align-items:center;gap:10px;margin:6px 0;font-size:13px;"
           >
             <span style="min-width:96px;flex:none;font-weight:700;color:#1f2a44;white-space:nowrap">{{ it.label }}</span>
+            <span style="width:48px;flex:none;text-align:left;font-weight:700;color:#5b6b80">{{ it.rate }}%</span>
             <div style="flex:1;height:12px;background:#eef1f6;border-radius:6px;overflow:hidden">
-              <div :style="{ width: it.rate + '%', height: '100%', background: '#3b6ef0' }"></div>
+              <div :style="{ width: it.rate + '%', height: '100%', background: '#8ec5ff' }"></div>
             </div>
-            <span style="width:42px;text-align:right;font-weight:700;color:#5b6b80">{{ it.rate }}%</span>
           </div>
         </div>
       </div>
 
-      <ResultCard title="DISC · 行为与沟通风格" :axes="discA" color="#e4572e" />
-      <ResultCard title="PDP · 能量特质与气场" :axes="pdpA" color="#3b6ef0" />
-      <ResultCard title="九型 · 核心动机与注意力焦点" :axes="enneaA" color="#10b3a3" />
-      <CareerCard :axes="careerA" color="#8b5cf6" />
+      <ResultCard title="DISC · 行为与沟通风格" :axes="discA" color="#8ec5ff" />
+      <ResultCard title="PDP · 能量特质与气场" :axes="pdpA" color="#8ec5ff" />
+      <ResultCard title="九型 · 核心动机与注意力焦点" :axes="enneaA" color="#8ec5ff" />
+      <CareerCard :axes="careerA" color="#8ec5ff" />
 
       <!-- 答题记录 -->
       <div class="answer-record">
