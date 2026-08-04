@@ -51,3 +51,8 @@ export function mapMbtiPair(
   const map = getMap('mbti')
   return { ...pair, a: map[pair.a] ?? pair.a, b: map[pair.b] ?? pair.b }
 }
+
+/** 将单个 MBTI 字母（如 E/I/S/N…）替换为「文字+字母」格式 */
+export function mapMbtiLetter(label: string): string {
+  return getMap('mbti')[label] ?? label
+}

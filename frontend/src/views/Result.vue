@@ -19,7 +19,7 @@
             :key="i"
             style="display:flex;align-items:center;gap:10px;margin:6px 0;font-size:13px;"
           >
-            <span style="width:24px;font-weight:700;color:#1f2a44">{{ it.label }}</span>
+            <span style="min-width:96px;flex:none;font-weight:700;color:#1f2a44;white-space:nowrap">{{ it.label }}</span>
             <div style="flex:1;height:12px;background:#eef1f6;border-radius:6px;overflow:hidden">
               <div :style="{ width: it.rate + '%', height: '100%', background: '#3b6ef0' }"></div>
             </div>
@@ -57,9 +57,8 @@
         </div>
       </div>
 
-      <div class="result-actions no-print" style="display:flex;gap:12px;margin-top:8px">
-        <button class="go" style="flex:1" @click="back">返回选择页</button>
-        <button class="go" style="flex:1;background:var(--accent);color:#fff" @click="printReport">下载 PDF 报告</button>
+      <div class="result-actions no-print" style="margin-top:8px">
+        <button class="text-btn" @click="back">返回选择页</button>
       </div>
     </template>
   </div>
@@ -72,7 +71,7 @@ import ResultCard from '@/components/ResultCard.vue'
 import CareerCard from '@/components/CareerCard.vue'
 import { surveyStore } from '@/stores/survey'
 import { uiStore } from '@/stores/ui'
-import { getReportUrl } from '@/api/http'
+import { mapAxisLabels, mapMbtiLetter } from '@/utils/labels'
 import type { SurveyResult, RadarAxis } from '@/types/quiz'
 
 const router = useRouter()
@@ -84,17 +83,17 @@ function sortAxes(axes?: RadarAxis[]): RadarAxis[] {
   if (!axes) return []
   return [...axes].sort((a, b) => b.rate - a.rate)
 }
-const discA = computed(() => sortAxes(result.value?.disc))
-const pdpA = computed(() => sortAxes(result.value?.pdp))
-const enneaA = computed(() => sortAxes(result.value?.ennea))
-const careerA = computed(() => sortAxes(result.value?.career))
-// MBTI 八个字母（各维度两个极性）按占比降序排列
+const discA = computed(() => sortAxes(mapAxisLabels(result.value?.disc, 'disc')))
+const pdpA = computed(() => sortAxes(mapAxisLabels(result.value?.pdp, 'pdp')))
+const enneaA = computed(() => sortAxes(mapAxisLabels(result.value?.ennea, 'ennea')))
+const careerA = computed(() => sortAxes(mapAxisLabels(result.value?.career, 'career')))
+// MBTI 八个字母（各维度两个极性）按占比降序排列，并映射为中文文字
 const mbtiLetters = computed(() => {
   const ps = result.value?.mbti.pairs || []
   const list: { label: string; rate: number }[] = []
   for (const p of ps) {
-    list.push({ label: p.a, rate: p.pa })
-    list.push({ label: p.b, rate: p.pb })
+    list.push({ label: mapMbtiLetter(p.a), rate: p.pa })
+    list.push({ label: mapMbtiLetter(p.b), rate: p.pb })
   }
   return list.sort((a, b) => b.rate - a.rate)
 })
@@ -127,9 +126,17 @@ onMounted(async () => {
 })
 
 function back(): void { router.push('/select') }
-function printReport(): void { window.open(getReportUrl(), '_blank') }
 </script>
 
 <style scoped>
 .loading-tip { text-align: center; color: var(--sub); padding: 40px 0; }
+.text-btn {
+  background: none;
+  border: none;
+  padding: 6px 0;
+  color: var(--accent);
+  font-size: 14px;
+  cursor: pointer;
+}
+.text-btn:hover { text-decoration: underline; }
 </style>

@@ -8,6 +8,19 @@ import { questions, partOrder, partRange, chapters } from '../quiz/bank'
 import { cleanText, cleanOpt } from '../quiz/clean'
 import type { SurveyResult, RadarAxis } from '../types/quiz'
 
+// 字母 -> 中文文字（与前端 src/utils/labels.ts 保持一致）
+const CN_LABELS: Record<string, Record<string, string>> = {
+  mbti: { E: '外倾', I: '内倾', N: '直觉', S: '感觉', T: '思考', F: '情感', J: '判断', P: '知觉' },
+  disc: { D: '支配型', I: '影响型', S: '稳健型', C: '服从型' },
+  pdp: { T: '老虎型', P: '孔雀型', K: '考拉型', O: '猫头鹰型', C: '变色龙型' },
+  ennea: { A: '完美型', B: '助人型', C: '成就型', D: '浪漫型', E: '理智型', F: '忠诚型', G: '活跃型', H: '领袖型', I: '和平型' },
+  career: { X: '自由型', Y: '平衡型', Z: '活力型', W: '安全型', V: '进取型' },
+}
+
+function cnLabel(type: keyof typeof CN_LABELS, letter: string): string {
+  return CN_LABELS[type]?.[letter] ?? letter
+}
+
 const PAGE_W = 595.28
 const PAGE_H = 841.89
 const MARGIN = 48
@@ -93,17 +106,17 @@ export class ReportService {
       this.y -= 4
       const pairs: any[] = mbti.pairs || []
       for (const p of pairs) {
-        this.drawBarRow(`${p.a}  ${p.pa ?? 0}%`, p.pa ?? 0, C_PRIMARY)
-        this.drawBarRow(`${p.b}  ${p.pb ?? 0}%`, p.pb ?? 0, C_SUB)
+        this.drawBarRow(`${cnLabel('mbti', p.a)}  ${p.pa ?? 0}%`, p.pa ?? 0, C_PRIMARY)
+        this.drawBarRow(`${cnLabel('mbti', p.b)}  ${p.pb ?? 0}%`, p.pb ?? 0, C_SUB)
         this.y -= 4
       }
       this.y -= 6
     }
 
-    this.drawDimensionSection('二、DISC 行为风格', results.disc)
-    this.drawDimensionSection('三、PDP 天性特质', results.pdp)
-    this.drawDimensionSection('四、九型人格', results.ennea)
-    this.drawDimensionSection('五、职业锚', results.career)
+    this.drawDimensionSection('二、DISC 行为风格', results.disc, 'disc')
+    this.drawDimensionSection('三、PDP 天性特质', results.pdp, 'pdp')
+    this.drawDimensionSection('四、九型人格', results.ennea, 'ennea')
+    this.drawDimensionSection('五、职业锚', results.career, 'career')
 
     if (Array.isArray(partRecords) && partRecords.length) {
       this.ensureSpace(80)
@@ -164,10 +177,10 @@ export class ReportService {
     this.page.drawText(title, { x: MARGIN + 12, y: this.y, size: 15, font: this.font, color: C_TEXT })
     this.y -= 26
   }
-  private drawDimensionSection(title: string, axes: AxisRow[]) {
+  private drawDimensionSection(title: string, axes: AxisRow[], type: keyof typeof CN_LABELS) {
     if (!Array.isArray(axes) || !axes.length) return
     this.drawSection(title)
-    for (const ax of axes) this.drawBarRow(`${ax.label}  ${ax.rate ?? 0}%`, ax.rate ?? 0, C_PRIMARY)
+    for (const ax of axes) this.drawBarRow(`${cnLabel(type, ax.label)}  ${ax.rate ?? 0}%`, ax.rate ?? 0, C_PRIMARY)
     this.y -= 8
   }
   private drawBarRow(label: string, rate: number, color: any) {
