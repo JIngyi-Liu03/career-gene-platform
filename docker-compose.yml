@@ -37,6 +37,16 @@ services:
       REFRESH_JWT_SECRET: ${REFRESH_JWT_SECRET:?请在 .env 中设置 REFRESH_JWT_SECRET}
       ADMIN_USERNAME: ${ADMIN_USERNAME:?请在 .env 中设置 ADMIN_USERNAME}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:?请在 .env 中设置 ADMIN_PASSWORD}
+      # —— 腾讯云短信（未配置密钥时自动回退 dev 回显，不影响启动）——
+      SMS_PROVIDER: ${SMS_PROVIDER:-}
+      TENCENT_SECRET_ID: ${TENCENT_SECRET_ID:-}
+      TENCENT_SECRET_KEY: ${TENCENT_SECRET_KEY:-}
+      SMS_SDK_APP_ID: ${SMS_SDK_APP_ID:-}
+      SMS_SIGN_NAME: ${SMS_SIGN_NAME:-}
+      SMS_TEMPLATE_ID: ${SMS_TEMPLATE_ID:-}
+      SMS_REGION: ${SMS_REGION:-ap-guangzhou}
+      SMS_CODE_TTL: ${SMS_CODE_TTL:-300000}
+      SMS_SEND_INTERVAL: ${SMS_SEND_INTERVAL:-60000}
     depends_on:
       db:
         condition: service_healthy
