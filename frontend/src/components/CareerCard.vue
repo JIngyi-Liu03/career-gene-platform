@@ -32,8 +32,8 @@ const dominant = computed(() => {
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: 14px;
-  padding: 16px 18px;
-  margin-bottom: 12px;
+  padding: 14px 18px;
+  margin-bottom: 10px;
   box-shadow: 0 2px 10px rgba(31, 42, 68, 0.04);
 }
 .bar-row {
@@ -68,7 +68,7 @@ const dominant = computed(() => {
   color: #5b6b80;
 }
 .dominant {
-  margin-top: 12px;
+  margin-top: 8px;
   font-size: 14px;
   font-weight: 700;
   color: #1f2a44;

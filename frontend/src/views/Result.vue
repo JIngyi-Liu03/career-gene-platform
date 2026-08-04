@@ -136,8 +136,8 @@ function back(): void { router.push('/select') }
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: 14px;
-  padding: 16px 18px;
-  margin-bottom: 12px;
+  padding: 14px 18px;
+  margin-bottom: 10px;
   box-shadow: 0 2px 10px rgba(31, 42, 68, 0.04);
 }
 .block-title {
@@ -146,7 +146,7 @@ function back(): void { router.push('/select') }
   color: #1f2a44;
   margin-bottom: 10px;
 }
-.sub-label { font-size: 13px; color: #5b6b80; margin-top: 14px; margin-bottom: 4px; }
+.sub-label { font-size: 13px; color: #5b6b80; margin-top: 8px; margin-bottom: 4px; }
 /* 返回按钮：底部居中 */
 .result-actions { text-align: center; margin-top: 16px; }
 .text-btn {
