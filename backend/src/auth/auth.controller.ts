@@ -23,8 +23,6 @@ export class AuthController {
     return this.service.register(dto)
   }
 
-  // 登录：每 IP 每分钟最多 5 次，防密码爆破。
-  @Throttle({ global: { limit: 5, ttl: 60000 } })
   @Post('login')
   login(@Body() dto: LoginDto) {
     return this.service.login(dto)
